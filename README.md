@@ -2,7 +2,7 @@
 
 Implementacion inicial del proyecto de Sistemas Distribuidos. El repositorio sigue los contratos de `Contratos_SD_v1.md` y el diseno de `Entrega SD - Informe.pdf`.
 
-## Primer incremento
+## Incrementos implementados
 
 Este punto de partida incluye:
 
@@ -12,8 +12,12 @@ Este punto de partida incluye:
 - PostgreSQL administrado mediante una migracion Alembic;
 - API Gateway NGINX que conserva `/api/v1` y no publica rutas internas;
 - Docker Compose y pruebas automatizadas del flujo principal.
+- servicio **Parkings** con consultas autenticadas, asignaciones internas idempotentes y liberacion segura;
+- plazas con estado fisico, asignacion y vigencia de sensor independientes;
+- consumo durable de reportes de sensor, reintentos/DLQ y outbox transaccional para eventos de Parkings;
+- base, migracion y seed reproducible propios de Parkings.
 
-Los servicios Parkings, Reservas, Metricas, Notificaciones, el simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
+Los servicios Reservas, Metricas, Notificaciones, el simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
 
 ## Ejecutar
 
@@ -28,6 +32,8 @@ Para crear el administrador inicial, complete `ADMIN_NAME`, `ADMIN_EMAIL` y `ADM
 
 La API queda disponible a traves del Gateway en `http://localhost:8080/api/v1/usuarios`. La documentacion OpenAPI del servicio puede habilitarse directamente en desarrollo publicando su puerto, pero no se expone en el Gateway.
 
+Los estacionamientos y sus plazas se consultan en `http://localhost:8080/api/v1/parkings` usando un access token emitido por Usuarios. El seed crea `Parking Central` y la plaza `A-01`, inicialmente con disponibilidad `unknown` hasta recibir un reporte vigente del sensor.
+
 Ejemplo de registro:
 
 ```powershell
@@ -41,8 +47,10 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/v1/usuarios/regist
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\pip install -r services\usuarios\requirements-dev.txt
+.\.venv\Scripts\pip install -r services\parkings\requirements-dev.txt
 .\.venv\Scripts\pytest
+.\.venv\Scripts\pytest services\parkings\tests
 ```
 
-Las pruebas usan SQLite solo como doble local de persistencia. La ejecucion del prototipo usa PostgreSQL.
+Las suites se ejecutan por servicio porque cada contenedor mantiene su propio paquete `app`. Las pruebas usan SQLite solo como doble local de persistencia. La ejecucion del prototipo usa PostgreSQL.
 

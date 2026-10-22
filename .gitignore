@@ -1,6 +1,7 @@
 .env
 .venv/
 .test-deps/
+.parkings-test-deps/
 .test-keys/
 __pycache__/
 *.py[cod]
