@@ -1,0 +1,14 @@
+.env
+.venv/
+.test-deps/
+.test-keys/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite3
+secrets/
+tmp/
+
