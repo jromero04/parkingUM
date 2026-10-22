@@ -142,11 +142,12 @@ services:
         condition: service_healthy
       parkings:
         condition: service_healthy
-    networks: [backend]
+    networks: [backend, edge]
 
 networks:
   backend:
     internal: true
+  edge:
 
 volumes:
   postgres-data:
