@@ -34,6 +34,8 @@ def run(*args: str, check: bool = True) -> str:
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if check and result.returncode != 0:
         raise RuntimeError(

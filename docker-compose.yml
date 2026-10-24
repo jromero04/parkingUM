@@ -39,6 +39,22 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  reservas-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${RESERVAS_POSTGRES_DB:-reservas_db}
+      POSTGRES_USER: ${RESERVAS_POSTGRES_USER:-reservas_app}
+      POSTGRES_PASSWORD: ${RESERVAS_POSTGRES_PASSWORD:-dev-only-password}
+    volumes:
+      - reservas-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
   rabbitmq:
     image: rabbitmq:4.1-alpine
     environment:
@@ -154,6 +170,82 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  reservas:
+    build:
+      context: ./services/reservas
+      target: runtime
+    environment:
+      SERVICE_NAME: reservas
+      DATABASE_URL: ${RESERVAS_DATABASE_URL:-postgresql+psycopg://reservas_app:dev-only-password@reservas-db:5432/reservas_db}
+      PARKINGS_URL: http://parkings:8000
+      RESERVATIONS_SERVICE_TOKEN: ${RESERVATIONS_SERVICE_TOKEN:-dev-only-reservations-token}
+      JWT_ISSUER: ${JWT_ISSUER:-parking-users}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-parking-api}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/parking-keys/public.pem}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+      RECOVERY_POLL_SECONDS: ${RECOVERY_POLL_SECONDS:-5}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - jwt-keys:/run/parking-keys:ro
+    depends_on:
+      reservas-db:
+        condition: service_healthy
+      usuarios:
+        condition: service_healthy
+      parkings:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
+  reservas-recovery-worker:
+    build:
+      context: ./services/reservas
+      target: runtime
+    command: ["python", "-m", "app.recovery_worker"]
+    environment:
+      SERVICE_NAME: reservas-recovery
+      DATABASE_URL: ${RESERVAS_DATABASE_URL:-postgresql+psycopg://reservas_app:dev-only-password@reservas-db:5432/reservas_db}
+      PARKINGS_URL: http://parkings:8000
+      RESERVATIONS_SERVICE_TOKEN: ${RESERVATIONS_SERVICE_TOKEN:-dev-only-reservations-token}
+      RECOVERY_POLL_SECONDS: ${RECOVERY_POLL_SECONDS:-5}
+    depends_on:
+      reservas:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "WORKER_MODULE=app.recovery_worker python scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
+
+  reservas-outbox-worker:
+    build:
+      context: ./services/reservas
+      target: runtime
+    command: ["python", "-m", "app.outbox_worker"]
+    environment:
+      SERVICE_NAME: reservas-outbox
+      DATABASE_URL: ${RESERVAS_DATABASE_URL:-postgresql+psycopg://reservas_app:dev-only-password@reservas-db:5432/reservas_db}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+    depends_on:
+      reservas:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "WORKER_MODULE=app.outbox_worker python scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
+
   gateway:
     image: nginx:1.27-alpine
     ports:
@@ -164,6 +256,8 @@ services:
       usuarios:
         condition: service_healthy
       parkings:
+        condition: service_healthy
+      reservas:
         condition: service_healthy
     networks: [backend, edge]
     logging: *default-logging
@@ -176,6 +270,7 @@ networks:
 volumes:
   postgres-data:
   parkings-postgres-data:
+  reservas-postgres-data:
   rabbitmq-data:
   jwt-keys:
 

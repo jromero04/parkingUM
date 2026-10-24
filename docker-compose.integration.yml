@@ -9,3 +9,13 @@ services:
   parkings-sensor-worker:
     environment:
       SENSOR_FRESH_SECONDS: "300"
+  reservas:
+    ports:
+      - "18002:8000"
+    environment:
+      RECOVERY_POLL_SECONDS: "1"
+      RESERVATIONS_SERVICE_TOKEN: integration-reservations-token
+  reservas-recovery-worker:
+    environment:
+      RECOVERY_POLL_SECONDS: "1"
+      RESERVATIONS_SERVICE_TOKEN: integration-reservations-token
