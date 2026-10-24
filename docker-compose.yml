@@ -1,5 +1,11 @@
 name: estacionamiento-inteligente
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -15,6 +21,38 @@ services:
       timeout: 3s
       retries: 10
     networks: [backend]
+    logging: *default-logging
+
+  parkings-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${PARKINGS_POSTGRES_DB:-parkings_db}
+      POSTGRES_USER: ${PARKINGS_POSTGRES_USER:-parkings_app}
+      POSTGRES_PASSWORD: ${PARKINGS_POSTGRES_PASSWORD:-dev-only-password}
+    volumes:
+      - parkings-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
+  rabbitmq:
+    image: rabbitmq:4.1-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-parking_app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-dev-only-rabbit-password}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
 
   usuarios:
     build:
@@ -43,23 +81,101 @@ services:
       timeout: 3s
       retries: 10
     networks: [backend]
+    logging: *default-logging
+
+  parkings:
+    build:
+      context: ./services/parkings
+    environment:
+      SERVICE_NAME: parkings
+      DATABASE_URL: ${PARKINGS_DATABASE_URL:-postgresql+psycopg://parkings_app:dev-only-password@parkings-db:5432/parkings_db}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+      JWT_ISSUER: ${JWT_ISSUER:-parking-users}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-parking-api}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/parking-keys/public.pem}
+      RESERVATIONS_SERVICE_TOKEN: ${RESERVATIONS_SERVICE_TOKEN:-dev-only-reservations-token}
+      SENSOR_FRESH_SECONDS: ${SENSOR_FRESH_SECONDS:-15}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - jwt-keys:/run/parking-keys:ro
+    depends_on:
+      parkings-db:
+        condition: service_healthy
+      usuarios:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
+  parkings-sensor-worker:
+    build:
+      context: ./services/parkings
+    command: ["python", "-m", "app.sensor_worker"]
+    environment:
+      SERVICE_NAME: parkings-sensors
+      DATABASE_URL: ${PARKINGS_DATABASE_URL:-postgresql+psycopg://parkings_app:dev-only-password@parkings-db:5432/parkings_db}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+      SENSOR_FRESH_SECONDS: ${SENSOR_FRESH_SECONDS:-15}
+    depends_on:
+      parkings:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
+
+  parkings-outbox-worker:
+    build:
+      context: ./services/parkings
+    command: ["python", "-m", "app.outbox_worker"]
+    environment:
+      SERVICE_NAME: parkings-outbox
+      DATABASE_URL: ${PARKINGS_DATABASE_URL:-postgresql+psycopg://parkings_app:dev-only-password@parkings-db:5432/parkings_db}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+    depends_on:
+      parkings:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
 
   gateway:
     image: nginx:1.27-alpine
     ports:
-      - "8080:80"
+      - "${GATEWAY_PORT:-8080}:80"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       usuarios:
         condition: service_healthy
-    networks: [backend]
+      parkings:
+        condition: service_healthy
+    networks: [backend, edge]
+    logging: *default-logging
 
 networks:
   backend:
     internal: true
+  edge:
 
 volumes:
   postgres-data:
+  parkings-postgres-data:
+  rabbitmq-data:
   jwt-keys:
 
