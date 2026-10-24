@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]; PROJECT="estacionamiento-notifications-it"; GATEWAY="http://127.0.0.1:18080"
 COMPOSE=["docker","compose","-p",PROJECT,"-f","docker-compose.yml","-f","docker-compose.integration.yml"]
-ENV={**os.environ,"GATEWAY_PORT":"18080"}
+ENV={**os.environ,"GATEWAY_PORT":"18080","SENSOR_SIMULATOR_ENABLED":"false"}
 def run(*args,check=True):
     result=subprocess.run([*COMPOSE,*args],cwd=ROOT,env=ENV,capture_output=True,text=True,
                           encoding="utf-8",errors="replace")

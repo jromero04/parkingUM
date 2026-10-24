@@ -8,6 +8,9 @@ services:
   notificaciones-worker:
     environment:
       NOTIFICATIONS_SERVICE_TOKEN: integration-notifications-token
+  sensores:
+    environment:
+      REPORT_INTERVAL_SECONDS: "1"
   parkings:
     ports:
       - "18001:8000"

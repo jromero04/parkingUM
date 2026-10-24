@@ -351,6 +351,33 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  sensores:
+    build:
+      context: ./services/sensores
+      target: runtime
+    environment:
+      SERVICE_NAME: sensores
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+      STATE_DB_PATH: /data/sensors.db
+      SENSOR_ID: ${SIMULATOR_SENSOR_ID:-33333333-3333-4333-8333-333333333333}
+      SPOT_ID: ${SIMULATOR_SPOT_ID:-22222222-2222-4222-8222-222222222222}
+      REPORT_INTERVAL_SECONDS: ${SENSOR_REPORT_INTERVAL_SECONDS:-5}
+      SIMULATOR_ENABLED: ${SENSOR_SIMULATOR_ENABLED:-true}
+    volumes:
+      - sensor-state:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      parkings-sensor-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
+
   gateway:
     image: nginx:1.27-alpine
     ports:
@@ -380,6 +407,7 @@ volumes:
   reservas-postgres-data:
   metricas-postgres-data:
   notificaciones-postgres-data:
+  sensor-state:
   rabbitmq-data:
   jwt-keys:
 
