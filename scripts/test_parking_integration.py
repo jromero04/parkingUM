@@ -23,7 +23,7 @@ COMPOSE = [
     "-f",
     "docker-compose.integration.yml",
 ]
-ENV = {**os.environ, "GATEWAY_PORT": "18080"}
+ENV = {**os.environ, "GATEWAY_PORT": "18080", "SENSOR_SIMULATOR_ENABLED": "false"}
 
 
 def run(*args: str, check: bool = True) -> str:
@@ -258,6 +258,10 @@ def main() -> None:
     run("down", "-v", "--remove-orphans", check=False)
     try:
         run("up", "--build", "-d", "--wait")
+        # Esta prueba inspecciona la cola de salida de Parkings. El consumidor de
+        # Metricas se detiene para que la asercion no dependa de quien gana la
+        # carrera entre rabbitmqctl y metricas-worker.
+        run("stop", "metricas-worker")
         test_contract()
         print("OK: integración de Parkings, PostgreSQL, RabbitMQ, Gateway, outbox, reintentos y DLQ")
     finally:

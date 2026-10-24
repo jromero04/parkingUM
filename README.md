@@ -23,8 +23,10 @@ Este punto de partida incluye:
 - control de versiones para eventos duplicados o desordenados y consumidores RabbitMQ con reintentos/DLQ.
 - servicio **Notificaciones** con entregas simuladas persistentes, resolución interna de destinatarios y supresión por versión;
 - plantillas de confirmación/cancelación, deduplicación y reintentos/DLQ sin exponer emails en logs.
+- simulador durable de **Sensores** con secuencia monotónica, estado físico configurable y publisher confirms;
+- persistencia del evento pendiente para reintentar exactamente el mismo reporte tras una caída.
 
-El simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
+El frontend se incorporara en un incremento posterior. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
 
 ## Ejecutar
 
@@ -93,6 +95,26 @@ La suite reproducible de Notificaciones se ejecuta con:
 ```powershell
 docker build --target test -t proyecto-sd-notificaciones-test services/notificaciones
 docker run --rm proyecto-sd-notificaciones-test
+```
+
+La suite reproducible del simulador se ejecuta con:
+
+```powershell
+docker build --target test -t proyecto-sd-sensores-test services/sensores
+docker run --rm proyecto-sd-sensores-test
+```
+
+Para cambiar el estado físico durante la demo:
+
+```powershell
+docker compose exec sensores python scripts/set_state.py --occupied true
+docker compose exec sensores python scripts/set_state.py --occupied false
+```
+
+La integración del simulador valida publicación automática, cambio físico, reinicio y recuperación de RabbitMQ:
+
+```powershell
+python scripts\test_sensors_integration.py
 ```
 
 La integración de Notificaciones valida destinatarios, las tres plantillas, persistencia y ausencia de emails en logs:

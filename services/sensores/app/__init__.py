@@ -1,0 +1,1 @@
+"""Simulador durable de sensores."""

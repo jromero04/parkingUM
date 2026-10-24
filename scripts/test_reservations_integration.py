@@ -15,7 +15,7 @@ COMPOSE = [
     "docker", "compose", "-p", PROJECT,
     "-f", "docker-compose.yml", "-f", "docker-compose.integration.yml",
 ]
-ENV = {**os.environ, "GATEWAY_PORT": "18080"}
+ENV = {**os.environ, "GATEWAY_PORT": "18080", "SENSOR_SIMULATOR_ENABLED": "false"}
 
 
 def run(*args: str, check: bool = True) -> str:

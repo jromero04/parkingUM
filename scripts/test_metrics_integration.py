@@ -13,7 +13,7 @@ PROJECT = os.getenv("INTEGRATION_PROJECT", "estacionamiento-metrics-it")
 GATEWAY = "http://127.0.0.1:18080"
 COMPOSE = ["docker", "compose", "-p", PROJECT, "-f", "docker-compose.yml",
            "-f", "docker-compose.integration.yml"]
-ENV = {**os.environ, "GATEWAY_PORT": "18080"}
+ENV = {**os.environ, "GATEWAY_PORT": "18080", "SENSOR_SIMULATOR_ENABLED": "false"}
 
 
 def run(*args: str, check=True) -> str:
