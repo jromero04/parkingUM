@@ -71,6 +71,22 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  notificaciones-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${NOTIFICACIONES_POSTGRES_DB:-notificaciones_db}
+      POSTGRES_USER: ${NOTIFICACIONES_POSTGRES_USER:-notificaciones_app}
+      POSTGRES_PASSWORD: ${NOTIFICACIONES_POSTGRES_PASSWORD:-dev-only-password}
+    volumes:
+      - notificaciones-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
   rabbitmq:
     image: rabbitmq:4.1-alpine
     environment:
@@ -310,6 +326,31 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  notificaciones-worker:
+    build:
+      context: ./services/notificaciones
+      target: runtime
+    environment:
+      SERVICE_NAME: notificaciones-worker
+      DATABASE_URL: ${NOTIFICACIONES_DATABASE_URL:-postgresql+psycopg://notificaciones_app:dev-only-password@notificaciones-db:5432/notificaciones_db}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+      USUARIOS_URL: http://usuarios:8000
+      NOTIFICATIONS_SERVICE_TOKEN: ${NOTIFICATIONS_SERVICE_TOKEN:-dev-only-notifications-token}
+    depends_on:
+      notificaciones-db:
+        condition: service_healthy
+      usuarios:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
+
   gateway:
     image: nginx:1.27-alpine
     ports:
@@ -338,6 +379,7 @@ volumes:
   parkings-postgres-data:
   reservas-postgres-data:
   metricas-postgres-data:
+  notificaciones-postgres-data:
   rabbitmq-data:
   jwt-keys:
 

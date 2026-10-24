@@ -21,8 +21,10 @@ Este punto de partida incluye:
 - outbox transaccional y publicación durable de eventos de reservas para Métricas y Notificaciones.
 - servicio **Métricas** con proyecciones idempotentes de plazas y reservas, resumen administrativo y alertas stale;
 - control de versiones para eventos duplicados o desordenados y consumidores RabbitMQ con reintentos/DLQ.
+- servicio **Notificaciones** con entregas simuladas persistentes, resolución interna de destinatarios y supresión por versión;
+- plantillas de confirmación/cancelación, deduplicación y reintentos/DLQ sin exponer emails en logs.
 
-Los servicios Notificaciones, el simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
+El simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
 
 ## Ejecutar
 
@@ -84,6 +86,19 @@ La suite reproducible de Métricas se ejecuta con:
 ```powershell
 docker build --target test -t proyecto-sd-metricas-test services/metricas
 docker run --rm proyecto-sd-metricas-test
+```
+
+La suite reproducible de Notificaciones se ejecuta con:
+
+```powershell
+docker build --target test -t proyecto-sd-notificaciones-test services/notificaciones
+docker run --rm proyecto-sd-notificaciones-test
+```
+
+La integración de Notificaciones valida destinatarios, las tres plantillas, persistencia y ausencia de emails en logs:
+
+```powershell
+python scripts\test_notifications_integration.py
 ```
 
 La prueba integral levanta un proyecto Compose aislado en los puertos 18080 y 18001. Comprueba PostgreSQL real, concurrencia de asignaciones, RabbitMQ, outbox, recuperación del broker, reintentos, DLQ, Gateway y healthchecks; al finalizar elimina sus contenedores y volúmenes de prueba:
