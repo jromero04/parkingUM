@@ -54,3 +54,16 @@ python -m venv .venv
 
 Las suites se ejecutan por servicio porque cada contenedor mantiene su propio paquete `app`. Las pruebas usan SQLite solo como doble local de persistencia. La ejecucion del prototipo usa PostgreSQL.
 
+La suite de Parkings también puede ejecutarse en una imagen reproducible con Python 3.13:
+
+```powershell
+docker build --target test -t proyecto-sd-parkings-test services/parkings
+docker run --rm proyecto-sd-parkings-test
+```
+
+La prueba integral levanta un proyecto Compose aislado en los puertos 18080 y 18001. Comprueba PostgreSQL real, concurrencia de asignaciones, RabbitMQ, outbox, recuperación del broker, reintentos, DLQ, Gateway y healthchecks; al finalizar elimina sus contenedores y volúmenes de prueba:
+
+```powershell
+python scripts\test_parking_integration.py
+```
+

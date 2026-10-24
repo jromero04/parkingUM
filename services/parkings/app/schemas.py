@@ -9,6 +9,10 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class CompatibleEventModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+
 class ParkingRead(BaseModel):
     id: UUID
     name: str
@@ -48,7 +52,7 @@ class AssignmentRead(BaseModel):
     updated_at: datetime
 
 
-class SensorData(StrictModel):
+class SensorData(CompatibleEventModel):
     sensor_id: UUID
     spot_id: UUID
     sequence: int = Field(gt=0)
@@ -63,7 +67,7 @@ class SensorData(StrictModel):
         return value
 
 
-class EventEnvelope(StrictModel):
+class EventEnvelope(CompatibleEventModel):
     event_id: UUID
     event_type: Literal["sensor.reported.v1"]
     schema_version: Literal[1]

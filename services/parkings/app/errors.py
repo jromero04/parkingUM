@@ -1,8 +1,14 @@
 from typing import Any
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+from app.logging_config import log_event
+
+
+logger = logging.getLogger("parkings.errors")
 
 
 class ApiError(Exception):
@@ -39,4 +45,14 @@ def install_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception(
+            "Error inesperado",
+            exc_info=(type(exc), exc, exc.__traceback__),
+            extra={
+                "action": "event_failed",
+                "result": "error",
+                "correlation_id": request.state.correlation_id,
+                "error_code": "INTERNAL_ERROR",
+            },
+        )
         return error_response(request, 500, "INTERNAL_ERROR", "Ocurrio un error interno.", {})

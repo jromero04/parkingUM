@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -17,17 +18,23 @@ class UnknownSensorError(ValueError):
     pass
 
 
+@dataclass(frozen=True)
+class SensorProcessResult:
+    status: str
+    event_type: str | None = None
+
+
 def as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
 
 
-def process_sensor_event(session: Session, envelope: EventEnvelope, now: datetime | None = None) -> str:
+def process_sensor_event(session: Session, envelope: EventEnvelope, now: datetime | None = None) -> SensorProcessResult:
     now = as_utc(now or datetime.now(timezone.utc))
     event_id = str(envelope.event_id)
     if session.get(ProcessedEvent, (CONSUMER_NAME, event_id)) is not None:
-        return "duplicate"
+        return SensorProcessResult("duplicate")
 
     data = envelope.data
     spot = session.scalar(select(Spot).where(Spot.sensor_id == str(data.sensor_id)).with_for_update())
@@ -47,7 +54,7 @@ def process_sensor_event(session: Session, envelope: EventEnvelope, now: datetim
     )
     session.add(ProcessedEvent(consumer_name=CONSUMER_NAME, event_id=event_id, processed_at=now))
     if stale_or_old:
-        return "discarded"
+        return SensorProcessResult("discarded")
 
     was_fresh = availability(spot, now) != "unknown"
     physical_changed = spot.physical_occupied != data.physical_occupied
@@ -68,7 +75,7 @@ def process_sensor_event(session: Session, envelope: EventEnvelope, now: datetim
         event_type = "parking.sensor_refreshed.v1"
         reason = "heartbeat_received"
     add_spot_event(session, spot, event_type, reason, str(envelope.correlation_id))
-    return "accepted"
+    return SensorProcessResult("accepted", event_type)
 
 
 def mark_expired_sensors(session: Session, now: datetime | None = None) -> int:

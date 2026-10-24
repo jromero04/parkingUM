@@ -5,12 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.errors import install_exception_handlers
+from app.logging_config import configure_logging
 from app.middleware import correlation_and_logging_middleware
 from app.routes import health_router, internal_router, public_router
 
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
 settings = get_settings()
+configure_logging(settings.service_name)
 
 app = FastAPI(title="Servicio de Parkings", version="1.0.0", docs_url="/docs", openapi_url="/openapi.json")
 app.add_middleware(

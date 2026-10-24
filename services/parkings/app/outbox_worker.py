@@ -7,10 +7,11 @@ from sqlalchemy import select
 
 from app.broker import PARKING_EXCHANGE, connection, declare_topology
 from app.database import SessionLocal
+from app.logging_config import configure_logging, log_event
 from app.models import OutboxEvent
 
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+configure_logging("parkings-outbox")
 logger = logging.getLogger("parkings.outbox")
 
 
@@ -51,13 +52,25 @@ def run() -> None:
                         event.attempts += 1
                         event.last_error = None
                         db.commit()
+                        log_event(
+                            logger,
+                            "event_published",
+                            "success",
+                            correlation_id=event.correlation_id,
+                            event_id=event.event_id,
+                            event_type=event.event_type,
+                            attempt=event.attempts,
+                        )
                     except Exception as exc:
                         event.attempts += 1
                         event.last_error = str(exc)[:1000]
                         db.commit()
                         raise
         except Exception:
-            logger.exception("El relay de outbox se reconectara")
+            logger.exception(
+                "El relay de outbox se reconectara",
+                extra={"action": "recovery_attempted", "result": "retry", "correlation_id": None},
+            )
             if broker is not None and broker.is_open:
                 broker.close()
             time.sleep(5)

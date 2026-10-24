@@ -1,4 +1,5 @@
 import uuid
+import logging
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.errors import ApiError
 from app.models import Assignment, Parking, Spot
+from app.logging_config import log_event
 from app.outbox import add_spot_event, availability, spot_snapshot
 from app.schemas import AssignmentCreate, AssignmentRead, ParkingRead, SpotRead
 from app.security import authenticated_claims, require_reservations_service
@@ -26,6 +28,7 @@ internal_router = APIRouter(
     dependencies=[Depends(require_reservations_service)],
 )
 health_router = APIRouter(tags=["health"])
+logger = logging.getLogger("parkings.domain")
 
 
 def parking_read(parking: Parking) -> ParkingRead:
@@ -118,12 +121,54 @@ def assign_spot(
     existing = db.get(Assignment, reservation_value)
     if existing is not None:
         if existing.status == "released":
+            log_event(
+                logger,
+                "assignment_rejected",
+                "conflict",
+                level=logging.WARNING,
+                correlation_id=request.state.correlation_id,
+                reservation_id=reservation_value,
+                operation_id=operation_value,
+                error_code="ASSIGNMENT_CLOSED",
+            )
             raise ApiError(409, "ASSIGNMENT_CLOSED", "La asignacion ya fue cerrada.")
         if (existing.parking_id, existing.spot_id, existing.operation_id) != (parking_value, spot_value, operation_value):
+            log_event(
+                logger,
+                "assignment_rejected",
+                "conflict",
+                level=logging.WARNING,
+                correlation_id=request.state.correlation_id,
+                reservation_id=reservation_value,
+                operation_id=operation_value,
+                error_code="IDEMPOTENCY_KEY_REUSED",
+            )
             raise ApiError(409, "IDEMPOTENCY_KEY_REUSED", "La asignacion ya fue solicitada con otros datos.")
         if existing.status == "assigned":
             response.status_code = status.HTTP_200_OK
+            log_event(
+                logger,
+                "assignment_created",
+                "duplicate",
+                correlation_id=request.state.correlation_id,
+                reservation_id=reservation_value,
+                spot_id=spot_value,
+                operation_id=operation_value,
+                entity_version=existing.version,
+            )
             return assignment_read(existing)
+        log_event(
+            logger,
+            "assignment_rejected",
+            "duplicate_rejection",
+            level=logging.WARNING,
+            correlation_id=request.state.correlation_id,
+            reservation_id=reservation_value,
+            spot_id=spot_value,
+            operation_id=operation_value,
+            error_code="SPOT_UNAVAILABLE",
+            reason=existing.reason,
+        )
         raise unavailable_error(existing)
 
     if db.get(Parking, parking_value) is None:
@@ -138,6 +183,17 @@ def assign_spot(
         )
         db.add(rejected)
         db.commit()
+        log_event(
+            logger,
+            "assignment_rejected",
+            "not_found",
+            level=logging.WARNING,
+            correlation_id=request.state.correlation_id,
+            reservation_id=reservation_value,
+            spot_id=spot_value,
+            operation_id=operation_value,
+            error_code="RESOURCE_NOT_FOUND",
+        )
         raise unavailable_error(rejected)
 
     spot = db.scalar(select(Spot).where(Spot.id == spot_value, Spot.parking_id == parking_value))
@@ -153,6 +209,17 @@ def assign_spot(
         )
         db.add(rejected)
         db.commit()
+        log_event(
+            logger,
+            "assignment_rejected",
+            "not_found",
+            level=logging.WARNING,
+            correlation_id=request.state.correlation_id,
+            reservation_id=reservation_value,
+            spot_id=spot_value,
+            operation_id=operation_value,
+            error_code="RESOURCE_NOT_FOUND",
+        )
         raise unavailable_error(rejected)
 
     result = db.execute(
@@ -192,6 +259,18 @@ def assign_spot(
         )
         db.add(rejected)
         db.commit()
+        log_event(
+            logger,
+            "assignment_rejected",
+            "conflict",
+            level=logging.WARNING,
+            correlation_id=request.state.correlation_id,
+            reservation_id=reservation_value,
+            spot_id=spot_value,
+            operation_id=operation_value,
+            error_code="SPOT_UNAVAILABLE",
+            reason=reason,
+        )
         raise unavailable_error(rejected)
 
     assigned = Assignment(
@@ -208,6 +287,16 @@ def assign_spot(
     add_spot_event(db, spot, "parking.availability_changed.v1", "assignment_created", request.state.correlation_id)
     db.commit()
     response.status_code = status.HTTP_201_CREATED
+    log_event(
+        logger,
+        "assignment_created",
+        "success",
+        correlation_id=request.state.correlation_id,
+        reservation_id=reservation_value,
+        spot_id=spot_value,
+        operation_id=operation_value,
+        entity_version=assigned.version,
+    )
     return assignment_read(assigned)
 
 
@@ -239,7 +328,26 @@ def release_assignment(
     assignment = db.get(Assignment, reservation_value)
     if assignment is not None and assignment.status == "released":
         if assignment.release_operation_id != release_operation_id:
+            log_event(
+                logger,
+                "assignment_rejected",
+                "conflict",
+                level=logging.WARNING,
+                correlation_id=request.state.correlation_id,
+                reservation_id=reservation_value,
+                operation_id=release_operation_id,
+                error_code="IDEMPOTENCY_KEY_REUSED",
+            )
             raise ApiError(409, "IDEMPOTENCY_KEY_REUSED", "La liberacion ya uso otra clave.")
+        log_event(
+            logger,
+            "assignment_released",
+            "duplicate",
+            correlation_id=request.state.correlation_id,
+            reservation_id=reservation_value,
+            operation_id=release_operation_id,
+            entity_version=assignment.version,
+        )
         return assignment_read(assignment)
 
     if assignment is None:
@@ -251,6 +359,15 @@ def release_assignment(
         )
         db.add(assignment)
         db.commit()
+        log_event(
+            logger,
+            "assignment_released",
+            "closed_before_assignment",
+            correlation_id=request.state.correlation_id,
+            reservation_id=reservation_value,
+            operation_id=release_operation_id,
+            entity_version=assignment.version,
+        )
         return assignment_read(assignment)
 
     changed_spot = None
@@ -273,6 +390,16 @@ def release_assignment(
     if changed_spot is not None:
         add_spot_event(db, changed_spot, "parking.availability_changed.v1", "assignment_released", request.state.correlation_id)
     db.commit()
+    log_event(
+        logger,
+        "assignment_released",
+        "success",
+        correlation_id=request.state.correlation_id,
+        reservation_id=reservation_value,
+        spot_id=assignment.spot_id,
+        operation_id=release_operation_id,
+        entity_version=assignment.version,
+    )
     return assignment_read(assignment)
 
 
