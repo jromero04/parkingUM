@@ -1,4 +1,9 @@
 services:
+  usuarios:
+    environment:
+      ADMIN_NAME: Integration Admin
+      ADMIN_EMAIL: admin-integration@example.com
+      ADMIN_PASSWORD: integration-admin-password
   parkings:
     ports:
       - "18001:8000"

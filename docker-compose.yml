@@ -55,6 +55,22 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  metricas-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${METRICAS_POSTGRES_DB:-metricas_db}
+      POSTGRES_USER: ${METRICAS_POSTGRES_USER:-metricas_app}
+      POSTGRES_PASSWORD: ${METRICAS_POSTGRES_PASSWORD:-dev-only-password}
+    volumes:
+      - metricas-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
   rabbitmq:
     image: rabbitmq:4.1-alpine
     environment:
@@ -246,6 +262,54 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  metricas:
+    build:
+      context: ./services/metricas
+      target: runtime
+    environment:
+      SERVICE_NAME: metricas
+      DATABASE_URL: ${METRICAS_DATABASE_URL:-postgresql+psycopg://metricas_app:dev-only-password@metricas-db:5432/metricas_db}
+      JWT_ISSUER: ${JWT_ISSUER:-parking-users}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-parking-api}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/parking-keys/public.pem}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    volumes:
+      - jwt-keys:/run/parking-keys:ro
+    depends_on:
+      metricas-db:
+        condition: service_healthy
+      usuarios:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
+  metricas-worker:
+    build:
+      context: ./services/metricas
+      target: runtime
+    command: ["python", "-m", "app.worker"]
+    environment:
+      SERVICE_NAME: metricas-worker
+      DATABASE_URL: ${METRICAS_DATABASE_URL:-postgresql+psycopg://metricas_app:dev-only-password@metricas-db:5432/metricas_db}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+    depends_on:
+      metricas:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
+
   gateway:
     image: nginx:1.27-alpine
     ports:
@@ -259,6 +323,8 @@ services:
         condition: service_healthy
       reservas:
         condition: service_healthy
+      metricas:
+        condition: service_healthy
     networks: [backend, edge]
     logging: *default-logging
 
@@ -271,6 +337,7 @@ volumes:
   postgres-data:
   parkings-postgres-data:
   reservas-postgres-data:
+  metricas-postgres-data:
   rabbitmq-data:
   jwt-keys:
 
