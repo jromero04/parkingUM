@@ -16,8 +16,11 @@ Este punto de partida incluye:
 - plazas con estado fisico, asignacion y vigencia de sensor independientes;
 - consumo durable de reportes de sensor, reintentos/DLQ y outbox transaccional para eventos de Parkings;
 - base, migracion y seed reproducible propios de Parkings.
+- servicio **Reservas** con creación, consulta, listado y cancelación autenticadas;
+- idempotencia persistente por usuario, coordinación recuperable con Parkings y estados pending/cancel_pending;
+- outbox transaccional y publicación durable de eventos de reservas para Métricas y Notificaciones.
 
-Los servicios Reservas, Metricas, Notificaciones, el simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
+Los servicios Metricas, Notificaciones, el simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
 
 ## Ejecutar
 
@@ -33,6 +36,8 @@ Para crear el administrador inicial, complete `ADMIN_NAME`, `ADMIN_EMAIL` y `ADM
 La API queda disponible a traves del Gateway en `http://localhost:8080/api/v1/usuarios`. La documentacion OpenAPI del servicio puede habilitarse directamente en desarrollo publicando su puerto, pero no se expone en el Gateway.
 
 Los estacionamientos y sus plazas se consultan en `http://localhost:8080/api/v1/parkings` usando un access token emitido por Usuarios. El seed crea `Parking Central` y la plaza `A-01`, inicialmente con disponibilidad `unknown` hasta recibir un reporte vigente del sensor.
+
+Las reservas se crean en `http://localhost:8080/api/v1/reservas` con el mismo access token y una cabecera `Idempotency-Key` UUID. Si Parkings no puede resolver la operación de inmediato, la API responde 202 y el worker de recuperación continúa usando los mismos identificadores estables.
 
 Ejemplo de registro:
 
@@ -50,6 +55,7 @@ python -m venv .venv
 .\.venv\Scripts\pip install -r services\parkings\requirements-dev.txt
 .\.venv\Scripts\pytest
 .\.venv\Scripts\pytest services\parkings\tests
+.\.venv\Scripts\pytest services\reservas\tests
 ```
 
 Las suites se ejecutan por servicio porque cada contenedor mantiene su propio paquete `app`. Las pruebas usan SQLite solo como doble local de persistencia. La ejecucion del prototipo usa PostgreSQL.
@@ -61,9 +67,22 @@ docker build --target test -t proyecto-sd-parkings-test services/parkings
 docker run --rm proyecto-sd-parkings-test
 ```
 
+La suite reproducible de Reservas se ejecuta con:
+
+```powershell
+docker build --target test -t proyecto-sd-reservas-test services/reservas
+docker run --rm proyecto-sd-reservas-test
+```
+
 La prueba integral levanta un proyecto Compose aislado en los puertos 18080 y 18001. Comprueba PostgreSQL real, concurrencia de asignaciones, RabbitMQ, outbox, recuperación del broker, reintentos, DLQ, Gateway y healthchecks; al finalizar elimina sus contenedores y volúmenes de prueba:
 
 ```powershell
 python scripts\test_parking_integration.py
+```
+
+La integración de Reservas valida el flujo HTTP completo, ownership, idempotencia, recuperación tras una caída de Parkings y publicación de outbox:
+
+```powershell
+python scripts\test_reservations_integration.py
 ```
 
