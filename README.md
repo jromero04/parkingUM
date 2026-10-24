@@ -19,8 +19,10 @@ Este punto de partida incluye:
 - servicio **Reservas** con creación, consulta, listado y cancelación autenticadas;
 - idempotencia persistente por usuario, coordinación recuperable con Parkings y estados pending/cancel_pending;
 - outbox transaccional y publicación durable de eventos de reservas para Métricas y Notificaciones.
+- servicio **Métricas** con proyecciones idempotentes de plazas y reservas, resumen administrativo y alertas stale;
+- control de versiones para eventos duplicados o desordenados y consumidores RabbitMQ con reintentos/DLQ.
 
-Los servicios Metricas, Notificaciones, el simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
+Los servicios Notificaciones, el simulador y el frontend se incorporaran en incrementos posteriores. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
 
 ## Ejecutar
 
@@ -39,6 +41,8 @@ Los estacionamientos y sus plazas se consultan en `http://localhost:8080/api/v1/
 
 Las reservas se crean en `http://localhost:8080/api/v1/reservas` con el mismo access token y una cabecera `Idempotency-Key` UUID. Si Parkings no puede resolver la operación de inmediato, la API responde 202 y el worker de recuperación continúa usando los mismos identificadores estables.
 
+El resumen y las alertas se consultan en `http://localhost:8080/api/v1/metricas/resumen` y `/api/v1/metricas/alertas`. Ambos endpoints requieren un access token con rol `admin`.
+
 Ejemplo de registro:
 
 ```powershell
@@ -56,6 +60,7 @@ python -m venv .venv
 .\.venv\Scripts\pytest
 .\.venv\Scripts\pytest services\parkings\tests
 .\.venv\Scripts\pytest services\reservas\tests
+.\.venv\Scripts\pytest services\metricas\tests
 ```
 
 Las suites se ejecutan por servicio porque cada contenedor mantiene su propio paquete `app`. Las pruebas usan SQLite solo como doble local de persistencia. La ejecucion del prototipo usa PostgreSQL.
@@ -74,6 +79,13 @@ docker build --target test -t proyecto-sd-reservas-test services/reservas
 docker run --rm proyecto-sd-reservas-test
 ```
 
+La suite reproducible de Métricas se ejecuta con:
+
+```powershell
+docker build --target test -t proyecto-sd-metricas-test services/metricas
+docker run --rm proyecto-sd-metricas-test
+```
+
 La prueba integral levanta un proyecto Compose aislado en los puertos 18080 y 18001. Comprueba PostgreSQL real, concurrencia de asignaciones, RabbitMQ, outbox, recuperación del broker, reintentos, DLQ, Gateway y healthchecks; al finalizar elimina sus contenedores y volúmenes de prueba:
 
 ```powershell
@@ -84,5 +96,11 @@ La integración de Reservas valida el flujo HTTP completo, ownership, idempotenc
 
 ```powershell
 python scripts\test_reservations_integration.py
+```
+
+La integración de Métricas valida RBAC administrativo y la proyección completa seed → sensor → reserva → cancelación:
+
+```powershell
+python scripts\test_metrics_integration.py
 ```
 
