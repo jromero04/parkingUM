@@ -378,6 +378,22 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *default-logging
+
   gateway:
     image: nginx:1.27-alpine
     ports:
@@ -392,6 +408,8 @@ services:
       reservas:
         condition: service_healthy
       metricas:
+        condition: service_healthy
+      frontend:
         condition: service_healthy
     networks: [backend, edge]
     logging: *default-logging
