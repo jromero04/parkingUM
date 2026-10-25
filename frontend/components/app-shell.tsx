@@ -29,7 +29,7 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
   return (
     <div className="app-layout">
       <aside className="sidebar">
-        <Link href="/parkings" className="brand"><span>P</span> Parking SD</Link>
+        <Link href="/parkings" className="brand"><span>P</span> ParkingUM</Link>
         <nav>{links.map(([href, label]) => <Link key={href} href={href} className={pathname === href ? "active" : ""}>{label}</Link>)}</nav>
         <div className="user-panel">
           <strong>{user?.name}</strong>
@@ -38,7 +38,7 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
         </div>
       </aside>
       <main className="content">
-        <header className="page-heading"><div><p className="eyebrow">Sistema distribuido</p><h1>{title}</h1><p className="muted">{subtitle}</p></div><span className="live-dot">En línea</span></header>
+        <header className="page-heading"><div><p className="eyebrow"> Gestión inteligente de estacionamientos </p><h1>{title}</h1><p className="muted">{subtitle}</p></div><span className="live-dot">En línea</span></header>
         {children}
       </main>
     </div>

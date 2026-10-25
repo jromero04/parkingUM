@@ -27,7 +27,7 @@ export default function LoginPage() {
     }
   }
 
-  return <AuthCard title="Bienvenido" description="Ingresá para consultar y reservar plazas." footer={<>¿No tenés cuenta? <Link href="/registro">Registrate</Link></>}>
+  return <AuthCard title="Bienvenido!" description="Ingresá para consultar y reservar plazas." footer={<>¿No tenés cuenta? <Link href="/registro">Registrate</Link></>}>
     <form className="form" onSubmit={submit}>
       <Field label="Correo electrónico" name="email" type="email" autoComplete="email" placeholder="tu@correo.com" />
       <Field label="Contraseña" name="password" type="password" autoComplete="current-password" placeholder="••••••••••••" />

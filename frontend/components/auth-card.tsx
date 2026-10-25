@@ -11,7 +11,7 @@ export function AuthCard({ title, description, children, footer }: {
     <main className="auth-page">
       <div className="auth-glow" aria-hidden />
       <section className="auth-card">
-        <Link href="/" className="brand brand-auth"><span>P</span> Parking SD</Link>
+        <Link href="/" className="brand brand-auth"><span>P</span> ParkingUM</Link>
         <div>
           <p className="eyebrow">Acceso seguro</p>
           <h1>{title}</h1>

@@ -53,7 +53,7 @@ export default function ParkingsPage() {
     }
   }
 
-  return <Protected><AppShell title="Estacionamientos" subtitle="Disponibilidad actualizada automáticamente cada cinco segundos.">
+  return <Protected><AppShell title="Estacionamientos" subtitle="La disponibilidad se actualiza automáticamente.">
     <section className="toolbar">
       <label>Estacionamiento<select value={selected} onChange={(event) => { setSelected(event.target.value); setLoading(true); loadSpots(event.target.value).catch(() => setError("No se pudieron cargar las plazas.")).finally(() => setLoading(false)); }}>{parkings.map((parking) => <option key={parking.id} value={parking.id}>{parking.name} · {parking.address}</option>)}</select></label>
       <button className="secondary-button" onClick={() => loadSpots(selected)}>Actualizar</button>

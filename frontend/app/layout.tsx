@@ -4,7 +4,7 @@ import { AuthProvider } from "@/features/auth/auth-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Parking SD",
+  title: "ParkingUM",
   description: "Reservas de estacionamiento en tiempo real",
 };
 
