@@ -14,7 +14,7 @@ def utc_now() -> datetime:
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint("role IN ('user', 'admin')", name="ck_users_role"),
+        CheckConstraint("role IN ('user', 'admin', 'sensor')", name="ck_users_role"),
         Index("ix_users_created_at_id", "created_at", "id"),
     )
 

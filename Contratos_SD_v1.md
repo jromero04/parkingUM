@@ -32,9 +32,9 @@ Si NGINX genera el identificador, debe producir un UUID en el formato acordado, 
 ### 1.2 Seguridad
 
 - Usuarios emite JWT firmados con RS256. Clave privada solo en Usuarios; clave pública montada en los servicios que validan tokens. Para el prototipo la clave es estática por entorno.
-- Claims: `sub` (UUID del usuario), `role` (`user` o `admin`), `iss` (`parking-users`), `aud` (`parking-api`), `iat`, `exp`. Duración propuesta: 60 minutos.
+- Claims: `sub` (UUID del usuario), `role` (`user`, `admin` o `sensor`), `iss` (`parking-users`), `aud` (`parking-api`), `iat`, `exp`. Duración propuesta: 60 minutos.
 - Cada API protegida verifica firma, algoritmo fijo, emisor, audiencia y expiración; no confía en un `user_id` enviado por el navegador.
-- Usuarios nuevos tienen `role=user`. El administrador se crea por seed/configuración. El registro no acepta un rol.
+- Usuarios nuevos tienen `role=user`. El administrador y el operador de sensores se crean por seed/configuración. El registro no acepta un rol.
 - No hay refresh token en v1. Cerrar sesión elimina el token del cliente; no lo revoca de inmediato en el servidor. El frontend lo mantiene en memoria y requiere nuevo login al recargar.
 - Comunicación interna autenticada mediante secretos distintos por llamador y permisos por ruta, cargados por entorno. Reservas puede asignar/liberar/consultar asignaciones; Notificaciones puede resolver destinatarios. Se comparan los secretos sin registrarlos.
 - NGINX elimina cualquier `X-Service-Token` aportado por un cliente público. Los endpoints internos siguen exigiendo su propia credencial y no se publican a través del Gateway.

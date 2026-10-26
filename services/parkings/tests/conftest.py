@@ -89,21 +89,28 @@ def client(db_session):
 
 
 @pytest.fixture
-def auth_headers():
-    now = datetime.now(timezone.utc)
-    token = jwt.encode(
-        {
-            "sub": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-            "role": "user",
-            "iss": "parking-users",
-            "aud": "parking-api",
-            "iat": now,
-            "exp": now + timedelta(minutes=5),
-        },
-        private_path.read_text(encoding="utf-8"),
-        algorithm="RS256",
-    )
-    return {"Authorization": f"Bearer {token}"}
+def headers_for_role():
+    def build(role: str) -> dict[str, str]:
+        now = datetime.now(timezone.utc)
+        token = jwt.encode(
+            {
+                "sub": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "role": role,
+                "iss": "parking-users",
+                "aud": "parking-api",
+                "iat": now,
+                "exp": now + timedelta(minutes=5),
+            },
+            private_path.read_text(encoding="utf-8"),
+            algorithm="RS256",
+        )
+        return {"Authorization": f"Bearer {token}"}
+    return build
+
+
+@pytest.fixture
+def auth_headers(headers_for_role):
+    return headers_for_role("user")
 
 
 @pytest.fixture

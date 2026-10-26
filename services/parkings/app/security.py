@@ -22,7 +22,7 @@ def authenticated_claims(
     settings = get_settings()
     try:
         public_key = Path(settings.jwt_public_key_path).read_text(encoding="utf-8")
-        return jwt.decode(
+        payload = jwt.decode(
             credentials.credentials,
             public_key,
             algorithms=["RS256"],
@@ -30,6 +30,11 @@ def authenticated_claims(
             audience=settings.jwt_audience,
             options={"require": ["sub", "role", "iss", "aud", "iat", "exp"]},
         )
+        if payload.get("role") not in {"user", "admin"}:
+            raise ApiError(403, "FORBIDDEN", "El rol no tiene permiso para esta operacion.")
+        return payload
+    except ApiError:
+        raise
     except (InvalidTokenError, OSError):
         raise ApiError(401, "UNAUTHORIZED", "El token no es valido.") from None
 

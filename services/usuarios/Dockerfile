@@ -21,5 +21,5 @@ RUN useradd --create-home --uid 10001 appuser \
 USER appuser
 
 EXPOSE 8000
-CMD ["sh", "-c", "python scripts/ensure_keys.py && alembic upgrade head && python scripts/seed_admin.py && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "python scripts/ensure_keys.py && alembic upgrade head && python scripts/seed_admin.py && python scripts/seed_sensor.py && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 

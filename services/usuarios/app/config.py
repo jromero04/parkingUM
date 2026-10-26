@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     admin_name: str = ""
     admin_email: str = ""
     admin_password: str = ""
+    sensor_name: str = ""
+    sensor_email: str = ""
+    sensor_password: str = ""
 
 
 @lru_cache

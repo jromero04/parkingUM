@@ -1,5 +1,8 @@
 from uuid import uuid4
 
+from app.models import User
+from app.security import hash_password
+
 
 def register(client, email="ada@example.com"):
     return client.post(
@@ -62,4 +65,22 @@ def test_me_rejects_invalid_token(client):
     response = client.get("/api/v1/usuarios/me", headers={"Authorization": "Bearer invalid"})
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+def test_seeded_sensor_role_can_log_in(client, db_session):
+    db_session.add(User(
+        name="Operador de sensores",
+        email="sensores@example.com",
+        password_hash=hash_password("una-clave-sensor-123"),
+        role="sensor",
+    ))
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/usuarios/login",
+        json={"email": "sensores@example.com", "password": "una-clave-sensor-123"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["role"] == "sensor"
 

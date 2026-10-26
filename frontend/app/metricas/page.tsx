@@ -32,7 +32,7 @@ export default function MetricsPage() {
     return () => { window.clearTimeout(initialLoad); window.clearInterval(timer); };
   }, [load]);
 
-  return <Protected admin><AppShell title="Métricas" subtitle="Proyección eventual del estado operativo del sistema.">
+  return <Protected roles={["admin"]}><AppShell title="Métricas" subtitle="Proyección eventual del estado operativo del sistema.">
     {error && <ErrorNotice message={error} />}
     {!summary ? <div className="center-state">Cargando métricas…</div> : <>
       <section className="metric-grid"><Metric label="Plazas totales" value={summary.spots.total} /><Metric label="Disponibles" value={summary.spots.available} tone="green" /><Metric label="Ocupadas" value={summary.spots.occupied} tone="red" /><Metric label="Reservadas" value={summary.spots.reserved} tone="blue" /><Metric label="Sin datos" value={summary.spots.unknown} tone="amber" /><Metric label="Ocupación" value={summary.occupancy.percentage === null ? "—" : `${summary.occupancy.percentage}%`} /></section>

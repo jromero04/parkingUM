@@ -59,7 +59,7 @@ export default function SimulationPage() {
     }
   }
 
-  return <Protected admin><AppShell title="Simulación de sensores" subtitle="Control aislado para provocar y recuperar fallos reales en el flujo distribuido.">
+  return <Protected roles={["sensor"]}><AppShell title="Simulación de sensores" subtitle="Control aislado para provocar y recuperar fallos reales en el flujo distribuido.">
     <section className="simulation-summary">
       <article><span>Sensores configurados</span><strong>{sensors.length}</strong></article>
       <article><span>Publicando</span><strong>{sensors.length - stopped}</strong></article>

@@ -14,7 +14,7 @@ from app.errors import ApiError
 bearer = HTTPBearer(auto_error=False)
 
 
-def require_admin(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]) -> dict[str, Any]:
+def require_sensor(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]) -> dict[str, Any]:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise ApiError(401, "UNAUTHORIZED", "Se requiere autenticacion.")
     settings = get_settings()
@@ -28,6 +28,6 @@ def require_admin(credentials: Annotated[HTTPAuthorizationCredentials | None, De
         payload["sub"] = str(UUID(payload["sub"]))
     except (InvalidTokenError, OSError, TypeError, ValueError):
         raise ApiError(401, "UNAUTHORIZED", "El token no es valido.") from None
-    if payload.get("role") != "admin":
-        raise ApiError(403, "FORBIDDEN", "Se requiere rol administrador.")
+    if payload.get("role") != "sensor":
+        raise ApiError(403, "FORBIDDEN", "Se requiere rol de sensores.")
     return payload

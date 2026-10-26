@@ -4,6 +4,9 @@ services:
       ADMIN_NAME: Integration Admin
       ADMIN_EMAIL: admin-integration@example.com
       ADMIN_PASSWORD: integration-admin-password
+      SENSOR_NAME: Integration Sensors
+      SENSOR_EMAIL: sensors-integration@example.com
+      SENSOR_PASSWORD: integration-sensor-password
       NOTIFICATIONS_SERVICE_TOKEN: integration-notifications-token
   notificaciones-worker:
     environment:

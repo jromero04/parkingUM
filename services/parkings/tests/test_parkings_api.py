@@ -22,6 +22,12 @@ def test_public_endpoints_require_jwt_and_expose_contract_shape(client, auth_hea
     assert spots.json()[0]["availability"] == "available"
 
 
+def test_sensor_role_cannot_access_parking_options(client, headers_for_role):
+    response = client.get("/api/v1/parkings", headers=headers_for_role("sensor"))
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "FORBIDDEN"
+
+
 def test_assignment_is_atomic_and_idempotent(client, db_session, service_headers):
     reservation_id = str(uuid.uuid4())
     payload = assignment_payload()

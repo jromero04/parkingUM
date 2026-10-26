@@ -39,7 +39,7 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Para crear el administrador inicial, complete `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` en `.env` antes del primer arranque. El registro publico nunca acepta el rol.
+Para crear las cuentas internas iniciales, complete `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`, junto con `SENSOR_NAME`, `SENSOR_EMAIL` y `SENSOR_PASSWORD`, en `.env` antes del arranque. El registro público siempre crea usuarios comunes y nunca acepta un rol.
 
 La interfaz queda disponible en `http://localhost:8080`. El access token se mantiene solo en memoria, por lo que recargar la página requiere iniciar sesión nuevamente, de acuerdo con el contrato v1.
 
@@ -51,7 +51,7 @@ Las reservas se crean en `http://localhost:8080/api/v1/reservas` con el mismo ac
 
 El resumen y las alertas se consultan en `http://localhost:8080/api/v1/metricas/resumen` y `/api/v1/metricas/alertas`. Ambos endpoints requieren un access token con rol `admin`.
 
-Los administradores también disponen de la pantalla independiente `http://localhost:8080/simulacion`. Desde allí pueden detener o reactivar un sensor concreto. Un sensor detenido deja de publicar reportes; tras vencer `SENSOR_FRESH_SECONDS`, Parkings lo marca como `stale` y el dashboard de Métricas refleja la plaza como “Sin datos” junto con la alerta `SENSOR_DATA_STALE`. Al reactivarlo, el siguiente reporte recupera el sensor y elimina la alerta.
+La cuenta con rol `sensor` ingresa directamente a la pantalla independiente `http://localhost:8080/simulacion` y solo ve las opciones de sensores. Desde allí puede detener o reactivar un sensor concreto. Administradores y usuarios comunes no pueden acceder a esta pantalla ni a su API. Un sensor detenido deja de publicar reportes; tras vencer `SENSOR_FRESH_SECONDS`, Parkings lo marca como `stale` y el dashboard administrativo de Métricas refleja la plaza como “Sin datos” junto con la alerta `SENSOR_DATA_STALE`. Al reactivarlo, el siguiente reporte recupera el sensor y elimina la alerta.
 
 Ejemplo de registro:
 

@@ -5,15 +5,19 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
 import { useAuth } from "@/features/auth/auth-context";
+import type { Role } from "@/lib/types";
 
-export function Protected({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
+const homeFor = (role: Role) => role === "sensor" ? "/simulacion" : "/parkings";
+
+export function Protected({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user } = useAuth();
   const router = useRouter();
+  const allowed = !roles || (!!user && roles.includes(user.role));
   useEffect(() => {
     if (!user) router.replace("/login");
-    else if (admin && user.role !== "admin") router.replace("/parkings");
-  }, [admin, router, user]);
-  if (!user || (admin && user.role !== "admin")) return <main className="center-state">Verificando sesión…</main>;
+    else if (roles && !roles.includes(user.role)) router.replace(homeFor(user.role));
+  }, [roles, router, user]);
+  if (!user || !allowed) return <main className="center-state">Verificando sesión…</main>;
   return <>{children}</>;
 }
 
@@ -21,15 +25,18 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const links = [
-    ["/parkings", "Estacionamientos"],
-    ["/reservas", "Mis reservas"],
-    ...(user?.role === "admin" ? [["/metricas", "Métricas"], ["/simulacion", "Simulación"]] : []),
-  ];
+  const links = user?.role === "sensor"
+    ? [["/simulacion", "Sensores"]]
+    : [
+        ["/parkings", "Estacionamientos"],
+        ["/reservas", "Mis reservas"],
+        ...(user?.role === "admin" ? [["/metricas", "Métricas"]] : []),
+      ];
+  const home = user ? homeFor(user.role) : "/login";
   return (
     <div className="app-layout">
       <aside className="sidebar">
-        <Link href="/parkings" className="brand"><span>P</span> ParkingUM</Link>
+        <Link href={home} className="brand"><span>P</span> ParkingUM</Link>
         <nav>{links.map(([href, label]) => <Link key={href} href={href} className={pathname === href ? "active" : ""}>{label}</Link>)}</nav>
         <div className="user-panel">
           <strong>{user?.name}</strong>

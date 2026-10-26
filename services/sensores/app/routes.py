@@ -3,14 +3,14 @@ from fastapi import APIRouter, Depends
 from app.errors import ApiError
 from app.fleet import sensor_definitions, sensor_states
 from app.schemas import FailureUpdate, SimulatedSensor
-from app.security import require_admin
+from app.security import require_sensor
 from app.state import SensorState
 
 
 public_router = APIRouter(
     prefix="/api/v1/simulacion/sensores",
     tags=["simulacion"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_sensor)],
 )
 health_router = APIRouter(tags=["health"])
 

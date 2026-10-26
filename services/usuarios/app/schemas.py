@@ -43,7 +43,7 @@ class UserRead(BaseModel):
     id: UUID
     name: str
     email: EmailStr
-    role: Literal["user", "admin"]
+    role: Literal["user", "admin", "sensor"]
     created_at: datetime
 
 
