@@ -45,7 +45,7 @@ La interfaz queda disponible en `http://localhost:8080`. El access token se mant
 
 La API queda disponible a traves del Gateway en `http://localhost:8080/api/v1/usuarios`. La documentacion OpenAPI del servicio puede habilitarse directamente en desarrollo publicando su puerto, pero no se expone en el Gateway.
 
-Los estacionamientos y sus plazas se consultan en `http://localhost:8080/api/v1/parkings` usando un access token emitido por Usuarios. El seed crea `Parking Central` y la plaza `A-01`, inicialmente con disponibilidad `unknown` hasta recibir un reporte vigente del sensor.
+Los estacionamientos y sus plazas se consultan en `http://localhost:8080/api/v1/parkings` usando un access token emitido por Usuarios. El seed crea `Parking Central` con las 168 plazas del plano (A-01…A-72, B-01…B-18 y C-01…C-78), cada una vinculada a un sensor único. Empiezan con disponibilidad `unknown` hasta recibir su primer reporte.
 
 Las reservas se crean en `http://localhost:8080/api/v1/reservas` con el mismo access token y una cabecera `Idempotency-Key` UUID. Si Parkings no puede resolver la operación de inmediato, la API responde 202 y el worker de recuperación continúa usando los mismos identificadores estables.
 
@@ -127,9 +127,11 @@ docker run --rm proyecto-sd-sensores-test
 Para cambiar el estado físico durante la demo:
 
 ```powershell
-docker compose exec sensores python scripts/set_state.py --occupied true
-docker compose exec sensores python scripts/set_state.py --occupied false
+docker compose exec sensores python scripts/set_state.py --spot C-12 --occupied true
+docker compose exec sensores python scripts/set_state.py --spot C-12 --occupied false
 ```
+
+El simulador publica los 168 sensores en cada ciclo desde un único proceso. Para conservar el modo anterior de un solo sensor, configure `SIMULATE_FULL_PARKING=false`.
 
 La integración del simulador valida publicación automática, cambio físico, reinicio y recuperación de RabbitMQ:
 

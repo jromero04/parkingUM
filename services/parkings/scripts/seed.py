@@ -1,52 +1,37 @@
 import uuid
 
-from sqlalchemy import select
-
+from app.catalog import PARKING_ID, configured_spots
 from app.database import SessionLocal
 from app.models import Parking, Spot
 from app.outbox import add_spot_event
 
 
-PARKING_ID = "11111111-1111-4111-8111-111111111111"
-SPOT_ID = "22222222-2222-4222-8222-222222222222"
-SENSOR_ID = "33333333-3333-4333-8333-333333333333"
-
-
 def main() -> None:
     with SessionLocal() as db:
-        parking = db.scalar(
-            select(Parking).where(Parking.id == PARKING_ID)
-        )
+        parking = db.get(Parking, PARKING_ID)
+        if parking is None:
+            parking = Parking(id=PARKING_ID)
+            db.add(parking)
+        parking.name = "Parking Central"
+        parking.address = "Av. Dra. María Luisa Saldún de Rodriguez 2037"
 
-        if parking is not None:
-            parking.name = "Parking Central"
-            parking.address = "Av. Dra. María Luisa Saldún de Rodriguez 2037"
-            db.commit()
-            return
-
-        parking = Parking(
-            id=PARKING_ID,
-            name="Parking Central",
-            address="Av. Dra. María Luisa Saldún de Rodriguez 2037"
-        )
-
-        spot = Spot(
-            id=SPOT_ID,
-            parking_id=PARKING_ID,
-            sensor_id=SENSOR_ID,
-            label="A-01"
-        )
-
-        db.add_all([parking, spot])
-        db.flush()
-
-        add_spot_event(
-            db,
-            spot,
-            "parking.spot_initialized.v1",
-            "initial_state",
-            str(uuid.uuid4())
-        )
+        for definition in configured_spots():
+            spot = db.get(Spot, definition["id"])
+            if spot is None:
+                spot = Spot(parking_id=PARKING_ID, **definition)
+                db.add(spot)
+                db.flush()
+                add_spot_event(
+                    db,
+                    spot,
+                    "parking.spot_initialized.v1",
+                    "initial_state",
+                    str(uuid.uuid4()),
+                )
+            else:
+                spot.parking_id = PARKING_ID
+                spot.sensor_id = definition["sensor_id"]
+                spot.label = definition["label"]
 
         db.commit()
 

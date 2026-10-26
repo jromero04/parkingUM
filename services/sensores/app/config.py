@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     spot_id: str = "22222222-2222-4222-8222-222222222222"
     report_interval_seconds: float = Field(default=5, ge=0.2, le=300)
     simulator_enabled: bool = True
+    simulate_full_parking: bool = True
 
 
 @lru_cache

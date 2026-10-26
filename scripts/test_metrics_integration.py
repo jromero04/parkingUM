@@ -62,10 +62,10 @@ def test_contract():
 
     def initial_projection():
         status, body = request("GET", f"{GATEWAY}/api/v1/metricas/resumen", headers=admin)
-        return status == 200 and body["spots"]["total"] == 1
+        return status == 200 and body["spots"]["total"] == 168
     wait_until(initial_projection, "Metricas no proyecto el seed")
     status, alerts = request("GET", f"{GATEWAY}/api/v1/metricas/alertas", headers=admin)
-    assert status == 200 and len(alerts["items"]) == 1
+    assert status == 200 and len(alerts["items"]) == 168
 
     status, parkings = request("GET", f"{GATEWAY}/api/v1/parkings", headers=user)
     parking_id = parkings[0]["id"]

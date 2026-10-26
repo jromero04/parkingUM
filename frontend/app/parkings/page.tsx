@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AppShell, EmptyState, ErrorNotice, Protected } from "@/components/app-shell";
-import { StatusBadge } from "@/components/status-badge";
+import { ParkingMap } from "@/components/parking-map";
 import { useAuth } from "@/features/auth/auth-context";
 import { ApiError } from "@/lib/api";
 import type { Parking, Spot } from "@/lib/types";
@@ -16,6 +16,7 @@ export default function ParkingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reservingId, setReservingId] = useState<string | null>(null);
 
   const loadSpots = useCallback(async (parkingId: string) => {
     if (!token || !parkingId) return;
@@ -39,7 +40,7 @@ export default function ParkingsPage() {
 
   async function reserve(spot: Spot) {
     if (!token) return;
-    setError(null); setMessage(null);
+    setError(null); setMessage(null); setReservingId(spot.id);
     try {
       const result = await request<{ reservation: { status: string } }>("/api/v1/reservas", {
         method: "POST",
@@ -50,7 +51,7 @@ export default function ParkingsPage() {
       await loadSpots(selected);
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "No se pudo crear la reserva.");
-    }
+    } finally { setReservingId(null); }
   }
 
   return <Protected><AppShell title="Estacionamientos" subtitle="La disponibilidad se actualiza automáticamente.">
@@ -59,6 +60,6 @@ export default function ParkingsPage() {
       <button className="secondary-button" onClick={() => loadSpots(selected)}>Actualizar</button>
     </section>
     {error && <ErrorNotice message={error} />}{message && <div className="notice success">{message}</div>}
-    {loading ? <div className="center-state">Cargando plazas…</div> : spots.length === 0 ? <EmptyState>No hay plazas configuradas.</EmptyState> : <section className="spot-grid">{spots.map((spot) => <article className={`spot-card spot-${spot.availability}`} key={spot.id}><div className="spot-top"><span className="spot-icon">P</span><StatusBadge status={spot.availability} /></div><div><p className="muted small">Plaza</p><h2>{spot.label}</h2></div><dl><div><dt>Sensor</dt><dd>{spot.sensor_status === "fresh" ? "Actualizado" : "Sin datos recientes"}</dd></div><div><dt>Último reporte</dt><dd>{spot.last_report_at ? new Date(spot.last_report_at).toLocaleTimeString("es-UY") : "Nunca"}</dd></div></dl><button className="primary-button full" disabled={spot.availability !== "available"} onClick={() => reserve(spot)}>{spot.availability === "available" ? "Reservar plaza" : "No disponible"}</button></article>)}</section>}
+    {loading ? <div className="center-state">Cargando plazas…</div> : spots.length === 0 ? <EmptyState>No hay plazas configuradas.</EmptyState> : <ParkingMap spots={spots} reservingId={reservingId} onReserve={reserve} />}
   </AppShell></Protected>;
 }

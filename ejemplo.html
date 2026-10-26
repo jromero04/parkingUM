@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa de estacionamiento</title>
+<style>
+:root{
+  --bg:#ffffff;--card:#ffffff;--text:#1f1f1d;--muted:#5f5e5a;--border:#d3d1c7;
+  --road:#f1efe8;--road-text:#5f5e5a;
+  --lot:#e1f5ee;--lot-line:#0f6e56;--lot-text:#085041;
+  --bld:#eeedfe;--bld-line:#534ab7;--bld-text:#3c3489;
+  --free:#1d9e75;--occ:#b4b2a9;--res:#ef9f27;--sel:#185fa5;
+  --accent:#185fa5;--accent-text:#ffffff;--danger:#a32d2d;--ok:#0f6e56;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1f1f1d;--card:#2a2a28;--text:#f1efe8;--muted:#b4b2a9;--border:#444441;
+    --road:#444441;--road-text:#d3d1c7;
+    --lot:#04342c;--lot-line:#5dcaa5;--lot-text:#9fe1cb;
+    --bld:#3c3489;--bld-line:#afa9ec;--bld-text:#cecbf6;
+    --free:#1d9e75;--occ:#5f5e5a;--res:#ef9f27;--sel:#85b7eb;
+    --accent:#85b7eb;--accent-text:#042c53;--danger:#f09595;--ok:#5dcaa5;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+.app{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:22px;font-weight:500;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 16px;font-size:15px}
+.bar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin-bottom:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:14px;height:14px;border-radius:3px;display:inline-block}
+.tools{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+input,select,button{font:inherit;color:var(--text)}
+input,select{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-height:40px;width:100%}
+button{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;min-height:40px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:500;width:100%}
+button:disabled{opacity:.5;cursor:default}
+.tools input{width:150px}
+.layout{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:1fr}}
+.map-scroll{border:1px solid var(--border);border-radius:12px;overflow:auto;max-height:78vh;background:var(--card)}
+.map-scroll svg{display:block;width:100%;height:auto}
+.panel{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--card)}
+.panel h2{font-size:18px;font-weight:500;margin:0 0 8px}
+.big{font-size:32px;font-weight:500;margin:0}
+.muted{color:var(--muted);font-size:14px}
+.field{margin:12px 0}
+.field label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+.msg{min-height:20px;font-size:14px;margin:8px 0 0}
+.msg.err{color:var(--danger)}
+.msg.ok{color:var(--ok)}
+.counts{display:flex;gap:16px;font-size:14px;margin:0 0 12px;color:var(--muted)}
+.counts b{color:var(--text);font-weight:500}
+.road{fill:var(--road)}
+.lot{fill:var(--lot);stroke:var(--lot-line);stroke-width:.5}
+.bld{fill:var(--bld);stroke:var(--bld-line);stroke-width:.5}
+.t-road{fill:var(--road-text);font-size:12px}
+.t-lot{fill:var(--lot-text);font-size:14px;font-weight:500}
+.t-bld{fill:var(--bld-text);font-size:14px;font-weight:500}
+.t-bld-s{fill:var(--bld-text);font-size:12px}
+.t-n{fill:var(--text);font-size:14px;font-weight:500}
+.stall{stroke:var(--lot);stroke-width:.8;outline:none}
+.stall.free{fill:var(--free);cursor:pointer}
+.stall.free:hover,.stall.free:focus{opacity:.75}
+.stall.occupied{fill:var(--occ);cursor:not-allowed}
+.stall.reserved{fill:var(--res);cursor:not-allowed}
+.stall.selected{fill:var(--sel);stroke:var(--text);stroke-width:1.6}
+.stall.pulse{animation:pulse .9s ease-in-out 3}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.stall.pulse{animation:none}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>Elegí tu plaza</h1>
+  <p class="sub">Tocá una plaza verde del mapa para ver su código y reservarla.</p>
+ 
+  <div class="bar">
+    <div class="legend" aria-label="Referencias">
+      <span><i class="dot" style="background:var(--free)"></i>Libre</span>
+      <span><i class="dot" style="background:var(--res)"></i>Reservada</span>
+      <span><i class="dot" style="background:var(--occ)"></i>Ocupada</span>
+      <span><i class="dot" style="background:var(--sel)"></i>Tu selección</span>
+    </div>
+    <form class="tools" id="search" autocomplete="off">
+      <label class="sr" for="q">Buscar plaza</label>
+      <input id="q" placeholder="Buscar: C-12" maxlength="6">
+      <button type="submit">Ir</button>
+      <button type="button" id="zout" aria-label="Alejar">−</button>
+      <button type="button" id="zin" aria-label="Acercar">+</button>
+    </form>
+  </div>
+ 
+  <div class="layout">
+    <div class="map-scroll" id="scroll"><div id="mapHost"></div></div>
+ 
+    <aside class="panel" aria-live="polite">
+      <p class="counts">
+        <span>Libres <b id="cFree">0</b></span>
+        <span>Reservadas <b id="cRes">0</b></span>
+        <span>Ocupadas <b id="cOcc">0</b></span>
+      </p>
+      <div id="empty">
+        <h2>Ninguna plaza elegida</h2>
+        <p class="muted">Seleccioná una plaza libre en el mapa o buscala por su código.</p>
+      </div>
+      <form id="form" hidden>
+        <p class="muted" style="margin:0">Plaza seleccionada</p>
+        <p class="big" id="spotId">—</p>
+        <p class="muted" id="spotZone" style="margin:0 0 4px"></p>
+        <div class="field"><label for="plate">Matrícula</label><input id="plate" maxlength="10" placeholder="ABC 1234"></div>
+        <div class="field"><label for="from">Desde</label><input id="from" type="datetime-local"></div>
+        <div class="field"><label for="hours">Duración</label>
+          <select id="hours">
+            <option value="1">1 hora</option><option value="2">2 horas</option>
+            <option value="3">3 horas</option><option value="4">4 horas</option>
+            <option value="8">8 horas</option><option value="24">Todo el día</option>
+          </select>
+        </div>
+        <button class="primary" id="btn" type="submit">Reservar plaza</button>
+        <button type="button" id="cancel" style="width:100%;margin-top:8px">Cancelar</button>
+      </form>
+      <p class="msg" id="msg"></p>
+    </aside>
+  </div>
+</main>
+ 
+<script>
+(function(){
+  /* Integración: asigná una función a ParkingMap.config.onReserve para enviar la reserva a tu servidor.
+     Recibe { spot, zone, plate, from, hours } y puede devolver una promesa.
+     Si falla (throw / reject) la plaza no se marca como reservada.
+     Para sincronizar estados reales: ParkingMap.setStatuses({ "A-03":"occupied", "C-12":"reserved" }) */
+  var CONFIG = { onReserve: null };
+ 
+  var W = 18, H = 12;
+  var ZONES = [
+    { id:'A', name:'Zona A', rows:[{x:70,y:72,n:18},{x:88,y:72,n:18},{x:134,y:72,n:18},{x:152,y:72,n:18}] },
+    { id:'B', name:'Zona B', rows:[{x:206,y:190,n:9},{x:224,y:190,n:9}] },
+    { id:'C', name:'Zona C', rows:[{x:285,y:364,n:13},{x:303,y:364,n:13},{x:349,y:364,n:13},{x:367,y:364,n:13},{x:413,y:364,n:13},{x:431,y:364,n:13}] }
+  ];
+  var LABEL = { free:'Libre', occupied:'Ocupada', reserved:'Reservada' };
+ 
+  function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;var t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  var rand = rng(2026);
+  var spots = {}, els = {}, selected = null;
+ 
+  ZONES.forEach(function(z){
+    var k = 1;
+    z.rows.forEach(function(r){
+      for(var i=0;i<r.n;i++){
+        var id = z.id+'-'+String(k++).padStart(2,'0');
+        var v = rand();
+        spots[id] = { id:id, zone:z, x:r.x, y:r.y+i*H, status: v<.5?'occupied':(v<.58?'reserved':'free') };
+      }
+    });
+  });
+ 
+  var stalls = Object.keys(spots).map(function(id){
+    var s = spots[id];
+    return '<rect class="stall '+s.status+'" data-id="'+id+'" x="'+s.x+'" y="'+s.y+'" width="'+W+'" height="'+H+'" rx="1.5" role="button" '+
+      (s.status==='free'?'tabindex="0" ':'')+'aria-label="Plaza '+id+', '+LABEL[s.status].toLowerCase()+'"><title>'+id+' · '+LABEL[s.status]+'</title></rect>';
+  }).join('');
+ 
+  var svg =
+  '<svg id="map" viewBox="0 0 680 630" role="group" aria-label="Plano del estacionamiento">'+
+  '<defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>'+
+  '<rect class="road" x="20" y="30" width="28" height="330"/>'+
+  '<rect class="road" x="48" y="332" width="227" height="28"/>'+
+  '<text class="t-road" x="160" y="346" text-anchor="middle" dominant-baseline="central">Calle interna</text>'+
+  '<rect class="road" x="470" y="30" width="28" height="544"/>'+
+  '<rect class="road" x="150" y="546" width="320" height="28"/>'+
+  '<text class="t-road" x="310" y="560" text-anchor="middle" dominant-baseline="central">Acceso Espacio Ciencia</text>'+
+  '<rect class="lot" x="60" y="40" width="120" height="270" rx="4"/>'+
+  '<text class="t-lot" x="120" y="58" text-anchor="middle" dominant-baseline="central">Zona A</text>'+
+  '<rect class="lot" x="200" y="160" width="70" height="150" rx="4"/>'+
+  '<text class="t-lot" x="235" y="178" text-anchor="middle" dominant-baseline="central">Zona B</text>'+
+  '<rect class="lot" x="275" y="332" width="190" height="210" rx="4"/>'+
+  '<text class="t-lot" x="370" y="350" text-anchor="middle" dominant-baseline="central">Zona C</text>'+
+  '<rect class="bld" x="200" y="112" width="56" height="26" rx="4"/>'+
+  '<text class="t-bld-s" x="228" y="125" text-anchor="middle" dominant-baseline="central">Caseta</text>'+
+  '<rect class="bld" x="60" y="385" width="185" height="125" rx="4"/>'+
+  '<text class="t-bld" x="152" y="440" text-anchor="middle" dominant-baseline="central">Espacio Ciencia</text>'+
+  '<text class="t-bld-s" x="152" y="458" text-anchor="middle" dominant-baseline="central">Museo de ciencia</text>'+
+  '<rect class="bld" x="510" y="170" width="160" height="170" rx="4"/>'+
+  '<text class="t-bld" x="590" y="246" text-anchor="middle" dominant-baseline="central">Universidad de</text>'+
+  '<text class="t-bld" x="590" y="266" text-anchor="middle" dominant-baseline="central">Montevideo</text>'+
+  '<rect class="bld" x="510" y="385" width="160" height="165" rx="4"/>'+
+  '<text class="t-bld" x="590" y="458" text-anchor="middle" dominant-baseline="central">Centro de Eventos</text>'+
+  '<text class="t-bld-s" x="590" y="478" text-anchor="middle" dominant-baseline="central">del Parque</text>'+
+  '<g style="color:var(--text)"><line x1="585" y1="95" x2="585" y2="55" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/></g>'+
+  '<text class="t-n" x="585" y="40" text-anchor="middle" dominant-baseline="central">N</text>'+
+  stalls+
+  '</svg>';
+ 
+  var host = document.getElementById('mapHost');
+  host.innerHTML = svg;
+  var map = document.getElementById('map');
+  Object.keys(spots).forEach(function(id){ els[id] = map.querySelector('[data-id="'+id+'"]'); });
+ 
+  var $ = function(i){return document.getElementById(i);};
+  var form=$('form'), empty=$('empty'), msg=$('msg'), plate=$('plate'), from=$('from'), hours=$('hours'), btn=$('btn');
+ 
+  function say(text, kind){ msg.textContent = text||''; msg.className = 'msg'+(kind?' '+kind:''); }
+ 
+  function counts(){
+    var c = {free:0,reserved:0,occupied:0};
+    Object.keys(spots).forEach(function(id){ c[spots[id].status]++; });
+    $('cFree').textContent = c.free; $('cRes').textContent = c.reserved; $('cOcc').textContent = c.occupied;
+  }
+ 
+  function paint(id){
+    var s = spots[id], e = els[id];
+    e.setAttribute('class','stall '+s.status+(selected===id?' selected':''));
+    e.setAttribute('aria-label','Plaza '+id+', '+LABEL[s.status].toLowerCase());
+    e.querySelector('title').textContent = id+' · '+LABEL[s.status];
+    if(s.status==='free') e.setAttribute('tabindex','0'); else e.removeAttribute('tabindex');
+  }
+ 
+  function setStatus(id, status){
+    if(!spots[id] || !LABEL[status]) return;
+    spots[id].status = status;
+    if(selected===id && status!=='free') clearSel();
+    paint(id); counts();
+  }
+  function setStatuses(obj){ Object.keys(obj).forEach(function(id){ setStatus(id, obj[id]); }); }
+ 
+  function defaultFrom(){
+    var d = new Date(Date.now()+15*60000);
+    d.setMinutes(Math.ceil(d.getMinutes()/5)*5,0,0);
+    var p = function(n){return String(n).padStart(2,'0');};
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+  }
+ 
+  function clearSel(){
+    var old = selected; selected = null;
+    if(old) paint(old);
+    form.hidden = true; empty.hidden = false;
+  }
+ 
+  function select(id){
+    var s = spots[id];
+    if(!s) return;
+    if(s.status!=='free'){
+      say('La plaza '+id+' está '+LABEL[s.status].toLowerCase()+'. Elegí una verde.','err');
+      return;
+    }
+    var old = selected; selected = id;
+    if(old) paint(old);
+    paint(id);
+    $('spotId').textContent = id;
+    $('spotZone').textContent = s.zone.name+' · '+LABEL[s.status];
+    if(!from.value) from.value = defaultFrom();
+    form.hidden = false; empty.hidden = true;
+    say('');
+  }
+ 
+  map.addEventListener('click', function(ev){
+    var t = ev.target.closest ? ev.target.closest('.stall') : null;
+    if(t) select(t.getAttribute('data-id'));
+  });
+  map.addEventListener('keydown', function(ev){
+    if(ev.key!=='Enter' && ev.key!==' ') return;
+    var t = ev.target.closest ? ev.target.closest('.stall') : null;
+    if(t){ ev.preventDefault(); select(t.getAttribute('data-id')); }
+  });
+ 
+  $('cancel').addEventListener('click', function(){ clearSel(); say(''); });
+ 
+  form.addEventListener('submit', async function(ev){
+    ev.preventDefault();
+    if(!selected) return;
+    var p = plate.value.trim().toUpperCase();
+    if(!p){ say('Ingresá la matrícula del vehículo.','err'); plate.focus(); return; }
+    if(!from.value){ say('Elegí la fecha y hora de inicio.','err'); from.focus(); return; }
+    var id = selected;
+    var payload = { spot:id, zone:spots[id].zone.id, plate:p, from:from.value, hours:Number(hours.value) };
+    btn.disabled = true;
+    try{
+      if(typeof CONFIG.onReserve === 'function') await CONFIG.onReserve(payload);
+      setStatus(id,'reserved');
+      say('Listo: reservaste la plaza '+id+' para '+p+'.','ok');
+      plate.value = '';
+    }catch(e){
+      say('No se pudo completar la reserva. Probá de nuevo.','err');
+    }
+    btn.disabled = false;
+  });
+ 
+  $('search').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var m = /^([ABC])\s*-?\s*(\d{1,2})$/i.exec($('q').value.trim());
+    if(!m){ say('Escribí un código válido, por ejemplo C-12.','err'); return; }
+    var id = m[1].toUpperCase()+'-'+m[2].padStart(2,'0');
+    if(!spots[id]){ say('La plaza '+id+' no existe.','err'); return; }
+    var e = els[id];
+    e.scrollIntoView({block:'center',inline:'center',behavior:'smooth'});
+    e.classList.add('pulse');
+    setTimeout(function(){ e.classList.remove('pulse'); }, 2800);
+    select(id);
+  });
+ 
+  var LEVELS = [1,1.6,2.4], lv = 0;
+  function zoom(d){
+    lv = Math.max(0, Math.min(LEVELS.length-1, lv+d));
+    map.style.width = (LEVELS[lv]*100)+'%';
+  }
+  $('zin').addEventListener('click', function(){ zoom(1); });
+  $('zout').addEventListener('click', function(){ zoom(-1); });
+  if(window.matchMedia && window.matchMedia('(max-width:860px)').matches){ zoom(1); }
+ 
+  counts();
+  window.ParkingMap = { config:CONFIG, setStatus:setStatus, setStatuses:setStatuses, spots:function(){ return Object.keys(spots).map(function(i){ return {id:i, zone:spots[i].zone.id, status:spots[i].status}; }); } };
+})();
+</script>
+</body>
+</html>

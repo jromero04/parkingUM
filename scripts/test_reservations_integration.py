@@ -94,7 +94,7 @@ def test_contract() -> None:
     assert status == 200 and len(parkings) == 1
     parking_id = parkings[0]["id"]
     status, spots, _ = request("GET", f"{GATEWAY}/api/v1/parkings/{parking_id}/plazas", headers=auth)
-    assert status == 200 and len(spots) == 1
+    assert status == 200 and len(spots) == 168
     spot_id = spots[0]["id"]
     publish_free_sensor()
 

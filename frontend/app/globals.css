@@ -541,6 +541,85 @@ button:disabled {
 
 /* Estacionamientos */
 
+.parking-map-experience {
+  --map-free: #22a06b;
+  --map-reserved: #f59e0b;
+  --map-occupied: #94a3b8;
+  --map-unknown: #e2e8f0;
+  --map-selected: #1677c8;
+}
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.map-legend, .map-search, .map-counts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .55rem 1rem;
+}
+
+.map-legend span { display: inline-flex; align-items: center; gap: .4rem; color: #475569; font-size: .78rem; }
+.map-dot { width: .75rem; height: .75rem; border-radius: .2rem; }
+.map-dot-available { background: var(--map-free); }
+.map-dot-reserved { background: var(--map-reserved); }
+.map-dot-occupied { background: var(--map-occupied); }
+.map-dot-unknown { background: var(--map-unknown); border: 1px solid #cbd5e1; }
+.map-dot-selected { background: var(--map-selected); }
+
+.map-search input {
+  width: 9rem;
+  min-height: 2.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .7rem;
+  padding: .65rem .8rem;
+}
+
+.zoom-button { width: 2.75rem; padding: 0; font-size: 1.25rem; }
+.parking-map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; align-items: start; gap: 1rem; }
+.parking-map-scroll { max-height: 72vh; overflow: auto; border: 1px solid #dce5ee; border-radius: 1rem; background: #ffffff; box-shadow: 0 3px 12px #33415508; }
+.parking-map { display: block; min-width: 680px; height: auto; transition: width .2s ease; }
+.map-road { fill: #edf2f7; }
+.map-road-label { fill: #64748b; font-size: 12px; }
+.map-lot { fill: #e7f8f1; stroke: #16845b; stroke-width: .5; }
+.map-lot-label { fill: #166534; font-size: 14px; font-weight: 750; }
+.map-building { fill: #eef2ff; stroke: #6366f1; stroke-width: .5; }
+.map-building-label { fill: #4338ca; font-size: 14px; font-weight: 700; }
+.map-building-small { fill: #4f46e5; font-size: 12px; }
+.map-north { color: #1e293b; fill: #1e293b; font-size: 14px; font-weight: 750; }
+.map-north line { stroke: currentColor; stroke-width: 1.5; }
+
+.map-stall { stroke: #e7f8f1; stroke-width: .8; transition: opacity .15s ease, stroke-width .15s ease; }
+.map-stall-available { fill: var(--map-free); cursor: pointer; }
+.map-stall-reserved { fill: var(--map-reserved); cursor: not-allowed; }
+.map-stall-occupied { fill: var(--map-occupied); cursor: not-allowed; }
+.map-stall-unknown { fill: var(--map-unknown); cursor: not-allowed; }
+.map-stall-available:hover, .map-stall-available:focus { opacity: .72; outline: none; }
+.map-stall-selected { fill: var(--map-selected); stroke: #0f172a; stroke-width: 1.8; }
+
+.map-selection { position: sticky; top: 1rem; min-height: 310px; padding: 1.2rem; border: 1px solid #dce5ee; border-radius: 1rem; background: #ffffff; box-shadow: 0 3px 12px #33415508; }
+.map-counts { padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: .72rem; }
+.map-counts strong { color: #1e293b; }
+.map-selection .eyebrow { margin-top: 1.2rem; }
+.map-selection h2 { margin: 0; font-size: 2.3rem; letter-spacing: -.04em; }
+.map-selection > .muted { margin: .25rem 0 1rem; }
+.map-selection > button + button { margin-top: .55rem; }
+.map-spot-details { margin: 0 0 1rem; font-size: .8rem; }
+.map-spot-details div { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem 0; border-top: 1px solid #e2e8f0; }
+.map-spot-details dt { color: #64748b; }
+.map-spot-details dd { margin: 0; text-align: right; }
+.map-empty-selection { padding: 2.5rem .2rem 1rem; text-align: center; }
+.map-empty-selection h2 { margin: 1rem 0 .4rem; font-size: 1.1rem; letter-spacing: 0; }
+.map-empty-selection p { margin: 0; font-size: .86rem; }
+.map-pin { display: grid; width: 3rem; height: 3rem; margin: auto; place-items: center; border-radius: .8rem; background: #eaf6ff; color: #1677c8; font-size: 1.4rem; font-weight: 900; }
+.map-message { margin: 1rem 0 0; padding: .7rem; border-radius: .6rem; background: #fff7ed; color: #9a3412; font-size: .8rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 .spot-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -879,6 +958,10 @@ button:disabled {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+
+  .map-toolbar { align-items: stretch; flex-direction: column; }
+  .parking-map-layout { grid-template-columns: 1fr; }
+  .map-selection { position: static; }
 }
 
 @media (max-width: 620px) {
@@ -936,6 +1019,10 @@ button:disabled {
   .spot-grid {
     grid-template-columns: 1fr;
   }
+
+  .map-search { flex-wrap: nowrap; }
+  .map-search input { flex: 1; min-width: 8rem; width: auto; }
+  .map-search .secondary-button { padding: 0 .75rem; }
 
   .reservation-card {
     align-items: flex-start;
