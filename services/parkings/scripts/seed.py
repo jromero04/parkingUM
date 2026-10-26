@@ -14,13 +14,40 @@ SENSOR_ID = "33333333-3333-4333-8333-333333333333"
 
 def main() -> None:
     with SessionLocal() as db:
-        if db.scalar(select(Parking).where(Parking.id == PARKING_ID)) is not None:
+        parking = db.scalar(
+            select(Parking).where(Parking.id == PARKING_ID)
+        )
+
+        if parking is not None:
+            parking.name = "Parking Central"
+            parking.address = "Av. Dra. María Luisa Saldún de Rodriguez 2037"
+            db.commit()
             return
-        parking = Parking(id=PARKING_ID, name="Parking Central", address="Av. Principal 1234")
-        spot = Spot(id=SPOT_ID, parking_id=PARKING_ID, sensor_id=SENSOR_ID, label="A-01")
+
+        parking = Parking(
+            id=PARKING_ID,
+            name="Parking Central",
+            address="Av. Dra. María Luisa Saldún de Rodriguez 2037"
+        )
+
+        spot = Spot(
+            id=SPOT_ID,
+            parking_id=PARKING_ID,
+            sensor_id=SENSOR_ID,
+            label="A-01"
+        )
+
         db.add_all([parking, spot])
         db.flush()
-        add_spot_event(db, spot, "parking.spot_initialized.v1", "initial_state", str(uuid.uuid4()))
+
+        add_spot_event(
+            db,
+            spot,
+            "parking.spot_initialized.v1",
+            "initial_state",
+            str(uuid.uuid4())
+        )
+
         db.commit()
 
 

@@ -4,6 +4,9 @@
 .test-keys
 __pycache__
 .pytest_cache
+node_modules
+.next
+coverage
 tmp
 secrets
 *.pdf

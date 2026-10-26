@@ -58,7 +58,7 @@ def db_session():
     TestingSession = sessionmaker(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)
     with TestingSession() as session:
-        session.add(Parking(id=PARKING_ID, name="Parking Central", address="Av. Principal 1234"))
+        session.add(Parking(id=PARKING_ID, name="Parking Central", address="Av. Dra. María Luisa de Saldún Rodríguez 2037"))
         session.add(
             Spot(
                 id=SPOT_ID,

@@ -25,8 +25,10 @@ Este punto de partida incluye:
 - plantillas de confirmación/cancelación, deduplicación y reintentos/DLQ sin exponer emails en logs.
 - simulador durable de **Sensores** con secuencia monotónica, estado físico configurable y publisher confirms;
 - persistencia del evento pendiente para reintentar exactamente el mismo reporte tras una caída.
+- **Frontend** responsive en Next.js con autenticación en memoria, consulta y reserva de plazas;
+- seguimiento y cancelación de reservas, además de métricas y alertas para administradores.
 
-El frontend se incorporara en un incremento posterior. No se agregaron implementaciones vacias que aparenten garantias distribuidas todavia inexistentes.
+El navegador accede a todas las funciones mediante el mismo Gateway; las rutas internas permanecen fuera de la red pública.
 
 ## Ejecutar
 
@@ -38,6 +40,8 @@ docker compose up --build
 ```
 
 Para crear el administrador inicial, complete `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` en `.env` antes del primer arranque. El registro publico nunca acepta el rol.
+
+La interfaz queda disponible en `http://localhost:8080`. El access token se mantiene solo en memoria, por lo que recargar la página requiere iniciar sesión nuevamente, de acuerdo con el contrato v1.
 
 La API queda disponible a traves del Gateway en `http://localhost:8080/api/v1/usuarios`. La documentacion OpenAPI del servicio puede habilitarse directamente en desarrollo publicando su puerto, pero no se expone en el Gateway.
 
@@ -56,6 +60,22 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8080/api/v1/usuarios/regist
 ```
 
 ## Pruebas locales
+
+El frontend usa Node.js 22 o superior:
+
+```powershell
+cd frontend
+npm install
+npm test
+npm run lint
+npm run build
+```
+
+La integración del frontend valida la imagen de producción, su publicación mediante NGINX y el flujo de registro/login:
+
+```powershell
+python scripts\test_frontend_integration.py
+```
 
 ```powershell
 python -m venv .venv
