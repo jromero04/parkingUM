@@ -29,7 +29,7 @@ export default function RegisterPage() {
 
   return <AuthCard title="Creá tu cuenta" description="Registrate para empezar a reservar." footer={<>¿Ya tenés cuenta? <Link href="/login">Ingresá</Link></>}>
     <form className="form" onSubmit={submit}>
-      <Field label="Nombre" name="name" minLength={1} maxLength={100} autoComplete="name" placeholder="Ada Lovelace" />
+      <Field label="Nombre" name="name" minLength={1} maxLength={100} autoComplete="name" placeholder="Juan Pérez" />
       <Field label="Correo electrónico" name="email" type="email" autoComplete="email" placeholder="tu@correo.com" />
       <Field label="Contraseña" name="password" type="password" minLength={12} maxLength={128} autoComplete="new-password" placeholder="Mínimo 12 caracteres" />
       <p className="field-help">Usá entre 12 y 128 caracteres.</p>

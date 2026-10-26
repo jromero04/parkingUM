@@ -13,7 +13,7 @@ export function AuthCard({ title, description, children, footer }: {
       <section className="auth-card">
         <Link href="/" className="brand brand-auth"><span>P</span> ParkingUM</Link>
         <div>
-          <p className="eyebrow">Acceso seguro</p>
+
           <h1>{title}</h1>
           <p className="muted">{description}</p>
         </div>
