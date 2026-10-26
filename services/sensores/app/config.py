@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     report_interval_seconds: float = Field(default=5, ge=0.2, le=300)
     simulator_enabled: bool = True
     simulate_full_parking: bool = True
+    start_publisher: bool = True
+    jwt_issuer: str = "parking-users"
+    jwt_audience: str = "parking-api"
+    jwt_public_key_path: str = "/run/parking-keys/public.pem"
+    cors_origin: str = "http://localhost:3000"
 
 
 @lru_cache

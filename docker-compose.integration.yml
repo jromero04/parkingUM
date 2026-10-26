@@ -15,12 +15,12 @@ services:
     ports:
       - "18001:8000"
     environment:
-      SENSOR_FRESH_SECONDS: "300"
+      SENSOR_FRESH_SECONDS: ${INTEGRATION_SENSOR_FRESH_SECONDS:-300}
       RESERVATIONS_SERVICE_TOKEN: integration-reservations-token
     networks: [backend, edge]
   parkings-sensor-worker:
     environment:
-      SENSOR_FRESH_SECONDS: "300"
+      SENSOR_FRESH_SECONDS: ${INTEGRATION_SENSOR_FRESH_SECONDS:-300}
   reservas:
     ports:
       - "18002:8000"

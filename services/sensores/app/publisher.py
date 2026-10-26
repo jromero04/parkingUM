@@ -2,19 +2,15 @@ import json, logging, time
 
 import pika
 
-from app.catalog import configured_sensors
 from app.config import get_settings
+from app.fleet import sensor_states
 from app.logging_config import configure_logging
-from app.state import SensorState
 
 
 configure_logging(); logger=logging.getLogger("sensores.publisher"); EXCHANGE="sensors.events"
 def run():
     settings=get_settings()
-    definitions = configured_sensors() if settings.simulate_full_parking else [{
-        "sensor_id": settings.sensor_id, "spot_id": settings.spot_id, "label": "A-01"
-    }]
-    states=[SensorState(settings.state_db_path,item["sensor_id"],item["spot_id"]) for item in definitions]
+    states=sensor_states()
     if not settings.simulator_enabled:
         logger.info("Simulador deshabilitado",extra={"action":"simulator_disabled","result":"idle","correlation_id":None})
         while True: time.sleep(60)
@@ -26,6 +22,8 @@ def run():
             channel.exchange_declare(exchange=EXCHANGE,exchange_type="topic",durable=True); channel.confirm_delivery()
             while True:
                 for state in states:
+                    if state.is_failed():
+                        continue
                     envelope=state.prepare_event(); data=envelope["data"]
                     channel.basic_publish(exchange=EXCHANGE,routing_key="sensor.reported.v1",
                         body=json.dumps(envelope,separators=(",",":")).encode(),mandatory=True,

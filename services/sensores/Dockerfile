@@ -13,4 +13,4 @@ CMD ["python", "-m", "pytest", "tests", "-q"]
 FROM base AS runtime
 RUN useradd --create-home --uid 10001 appuser && mkdir -p /data && chown -R appuser:appuser /app /data
 USER appuser
-CMD ["python", "-m", "app.publisher"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

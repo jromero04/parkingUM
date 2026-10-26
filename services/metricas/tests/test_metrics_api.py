@@ -46,6 +46,7 @@ def test_expired_sensor_is_unknown_and_generates_alert(db_session, client, admin
     alerts = client.get("/api/v1/metricas/alertas", headers=admin_headers)
     assert alerts.status_code == 200
     assert alerts.json()["items"][0]["spot_id"] == SPOT_ID
+    assert alerts.json()["items"][0]["label"] == "A-01"
     assert alerts.json()["items"][0]["code"] == "SENSOR_DATA_STALE"
 
 

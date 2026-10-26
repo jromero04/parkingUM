@@ -51,6 +51,8 @@ Las reservas se crean en `http://localhost:8080/api/v1/reservas` con el mismo ac
 
 El resumen y las alertas se consultan en `http://localhost:8080/api/v1/metricas/resumen` y `/api/v1/metricas/alertas`. Ambos endpoints requieren un access token con rol `admin`.
 
+Los administradores también disponen de la pantalla independiente `http://localhost:8080/simulacion`. Desde allí pueden detener o reactivar un sensor concreto. Un sensor detenido deja de publicar reportes; tras vencer `SENSOR_FRESH_SECONDS`, Parkings lo marca como `stale` y el dashboard de Métricas refleja la plaza como “Sin datos” junto con la alerta `SENSOR_DATA_STALE`. Al reactivarlo, el siguiente reporte recupera el sensor y elimina la alerta.
+
 Ejemplo de registro:
 
 ```powershell

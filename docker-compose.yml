@@ -364,12 +364,20 @@ services:
       REPORT_INTERVAL_SECONDS: ${SENSOR_REPORT_INTERVAL_SECONDS:-5}
       SIMULATOR_ENABLED: ${SENSOR_SIMULATOR_ENABLED:-true}
       SIMULATE_FULL_PARKING: ${SIMULATE_FULL_PARKING:-true}
+      START_PUBLISHER: "true"
+      JWT_ISSUER: ${JWT_ISSUER:-parking-users}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-parking-api}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/parking-keys/public.pem}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
     volumes:
       - sensor-state:/data
+      - jwt-keys:/run/parking-keys:ro
     depends_on:
       rabbitmq:
         condition: service_healthy
       parkings-sensor-worker:
+        condition: service_healthy
+      usuarios:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "scripts/worker_healthcheck.py"]
@@ -409,6 +417,8 @@ services:
       reservas:
         condition: service_healthy
       metricas:
+        condition: service_healthy
+      sensores:
         condition: service_healthy
       frontend:
         condition: service_healthy

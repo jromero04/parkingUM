@@ -902,6 +902,70 @@ button:disabled {
   text-align: right;
 }
 
+/* Simulación administrativa de sensores */
+
+.simulation-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, .45fr)) minmax(280px, 1.65fr);
+  gap: .8rem;
+  margin-bottom: 1rem;
+}
+
+.simulation-summary article,
+.simulation-summary > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 110px;
+  padding: 1rem 1.15rem;
+  border: 1px solid #dce5ee;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.simulation-summary article span { color: #64748b; font-size: .75rem; }
+.simulation-summary article strong { margin-top: .35rem; font-size: 2rem; }
+.simulation-summary .simulation-alert-count { border-color: #fecaca; background: #fff7f7; }
+.simulation-summary .simulation-alert-count strong { color: #be123c; }
+.simulation-summary > div { border-color: #bae6fd; background: #f0f9ff; }
+.simulation-summary > div strong { color: #0369a1; }
+.simulation-summary > div p { margin: .35rem 0 0; color: #475569; font-size: .82rem; line-height: 1.5; }
+
+.simulation-toolbar {
+  display: flex;
+  align-items: end;
+  gap: .8rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #dce5ee;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
+.simulation-toolbar label { display: flex; flex-direction: column; gap: .35rem; color: #64748b; font-size: .72rem; font-weight: 750; text-transform: uppercase; }
+.simulation-toolbar label:first-child { flex: 1; }
+.simulation-toolbar input,
+.simulation-toolbar select { min-height: 2.75rem; border: 1px solid #cbd5e1; border-radius: .7rem; background: #ffffff; padding: .65rem .8rem; color: #1e293b; text-transform: none; }
+.simulation-toolbar input:focus,
+.simulation-toolbar select:focus { border-color: #1677c8; outline: 2px solid #1677c822; }
+
+.sensor-table-wrap { overflow: auto; border: 1px solid #dce5ee; border-radius: 1rem; background: #ffffff; }
+.sensor-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+.sensor-table th { padding: .8rem 1rem; background: #f8fafc; color: #64748b; font-size: .7rem; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
+.sensor-table td { padding: .75rem 1rem; border-top: 1px solid #e2e8f0; font-size: .82rem; }
+.sensor-table th:last-child,
+.sensor-table td:last-child { text-align: right; }
+.sensor-table code { color: #64748b; }
+.sensor-row-stopped { background: #fffafa; }
+.sensor-state { display: inline-flex; align-items: center; gap: .45rem; font-weight: 700; }
+.sensor-state i { width: .5rem; height: .5rem; border-radius: 50%; }
+.sensor-state-active { color: #16845b; }
+.sensor-state-active i { background: #22a06b; box-shadow: 0 0 0 3px #dcfce7; }
+.sensor-state-stopped { color: #be123c; }
+.sensor-state-stopped i { background: #e11d48; box-shadow: 0 0 0 3px #ffe4e6; }
+.sensor-table .primary-button,
+.sensor-table .danger-button { min-width: 7rem; min-height: 2.3rem; }
+
 /* Adaptación a pantallas pequeñas */
 
 @media (max-width: 900px) {
@@ -958,6 +1022,9 @@ button:disabled {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+
+  .simulation-summary { grid-template-columns: repeat(3, 1fr); }
+  .simulation-summary > div { grid-column: 1 / -1; }
 
   .map-toolbar { align-items: stretch; flex-direction: column; }
   .parking-map-layout { grid-template-columns: 1fr; }
@@ -1033,6 +1100,11 @@ button:disabled {
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .simulation-summary { grid-template-columns: 1fr 1fr; }
+  .simulation-summary > article:first-child,
+  .simulation-summary > div { grid-column: 1 / -1; }
+  .simulation-toolbar { align-items: stretch; flex-direction: column; }
 }
 
 /* Ilustración minimalista de estacionamiento en la pantalla principal */

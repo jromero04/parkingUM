@@ -58,8 +58,19 @@ export type SensorAlert = {
   spot_id: string;
   parking_id: string;
   sensor_id: string;
+  label: string;
   code: "SENSOR_DATA_STALE";
   since: string;
   last_report_at: string | null;
   message: string;
+};
+
+export type SimulatedSensor = {
+  label: string;
+  sensor_id: string;
+  spot_id: string;
+  status: "active" | "stopped";
+  sequence: number;
+  physical_occupied: boolean;
+  updated_at: string;
 };

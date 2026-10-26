@@ -119,6 +119,7 @@ def alerts(
     return AlertsCollection(
         items=[SensorAlert(
             spot_id=value.id, parking_id=value.parking_id, sensor_id=value.sensor_id,
+            label=value.label,
             since=aware(value.sensor_expires_at) or aware(value.initialized_at),
             last_report_at=aware(value.last_report_at),
         ) for value in page],

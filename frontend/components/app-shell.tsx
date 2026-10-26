@@ -24,7 +24,7 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
   const links = [
     ["/parkings", "Estacionamientos"],
     ["/reservas", "Mis reservas"],
-    ...(user?.role === "admin" ? [["/metricas", "Métricas"]] : []),
+    ...(user?.role === "admin" ? [["/metricas", "Métricas"], ["/simulacion", "Simulación"]] : []),
   ];
   return (
     <div className="app-layout">

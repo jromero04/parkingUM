@@ -94,6 +94,7 @@ class SensorAlert(BaseModel):
     spot_id: UUID
     parking_id: UUID
     sensor_id: UUID
+    label: str
     code: Literal["SENSOR_DATA_STALE"] = "SENSOR_DATA_STALE"
     since: datetime
     last_report_at: datetime | None
