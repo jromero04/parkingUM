@@ -69,7 +69,6 @@ export default function SimulationPage() {
     <section className="simulation-toolbar">
       <label>Buscar plaza<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. C-12" /></label>
       <label>Estado<select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="all">Todos</option><option value="active">Publicando</option><option value="stopped">Detenidos</option></select></label>
-      <button className="secondary-button" onClick={() => void load()}>Actualizar</button>
     </section>
     {error && <ErrorNotice message={error} />}
     {message && <div className="notice success">{message}</div>}

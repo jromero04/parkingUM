@@ -464,22 +464,6 @@ button:disabled {
   margin: 0;
 }
 
-.live-dot {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  color: #16845b;
-  font-size: .8rem;
-}
-
-.live-dot::before {
-  content: "";
-  width: .5rem;
-  height: .5rem;
-  border-radius: 50%;
-  background: #22a06b;
-}
-
 /* Filtros y mensajes */
 
 .toolbar {
@@ -507,6 +491,29 @@ button:disabled {
 .toolbar select {
   min-width: min(500px, 70vw);
   color: #1e293b;
+  text-transform: none;
+}
+.toolbar-static {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  color: #64748b;
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.toolbar-static strong {
+  min-height: 2.85rem;
+  display: flex;
+  align-items: center;
+  padding: .7rem .85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .7rem;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 400;
   text-transform: none;
 }
 
@@ -1067,10 +1074,6 @@ button:disabled {
 
   .page-heading {
     margin-top: 1rem;
-  }
-
-  .live-dot {
-    display: none;
   }
 
   .toolbar {

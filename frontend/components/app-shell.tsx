@@ -43,7 +43,7 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
         </div>
       </aside>
       <main className="content">
-        <header className="page-heading"><div><p className="eyebrow"> Gestión inteligente de estacionamientos </p><h1>{title}</h1><p className="muted">{subtitle}</p></div><span className="live-dot">En línea</span></header>
+        <header className="page-heading"><div><p className="eyebrow"> Gestión inteligente de estacionamientos </p><h1>{title}</h1><p className="muted">{subtitle}</p></div></header>
         {children}
       </main>
     </div>

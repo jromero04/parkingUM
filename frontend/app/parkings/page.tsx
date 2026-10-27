@@ -53,11 +53,14 @@ export default function ParkingsPage() {
       setError(problem instanceof ApiError ? problem.message : "No se pudo crear la reserva.");
     } finally { setReservingId(null); }
   }
+  const current = parkings.find((parking) => parking.id === selected);
 
   return <Protected roles={["user"]}><AppShell title="Estacionamientos" subtitle="La disponibilidad se actualiza automáticamente.">
     <section className="toolbar">
-      <label>Estacionamiento<select value={selected} onChange={(event) => { setSelected(event.target.value); setLoading(true); loadSpots(event.target.value).catch(() => setError("No se pudieron cargar las plazas.")).finally(() => setLoading(false)); }}>{parkings.map((parking) => <option key={parking.id} value={parking.id}>{parking.name} · {parking.address}</option>)}</select></label>
-      <button className="secondary-button" onClick={() => loadSpots(selected)}>Actualizar</button>
+      <div className="toolbar-static">
+        <span>Estacionamiento</span>
+        <strong>{current ? `${current.name} · ${current.address}` : "—"}</strong>
+      </div>
     </section>
     {error && <ErrorNotice message={error} />}{message && <div className="notice success">{message}</div>}
     {loading ? <div className="center-state">Cargando plazas…</div> : spots.length === 0 ? <EmptyState>No hay plazas configuradas.</EmptyState> : <ParkingMap spots={spots} reservingId={reservingId} onReserve={reserve} />}
