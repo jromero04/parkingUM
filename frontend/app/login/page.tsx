@@ -19,8 +19,8 @@ export default function LoginPage() {
     setLoading(true); setError(null);
     const data = new FormData(event.currentTarget);
     try {
-      await login(String(data.get("email")), String(data.get("password")));
-      router.replace("/parkings");
+      const user = await login(String(data.get("email")), String(data.get("password")));
+      router.replace(user.role === "sensor" ? "/simulacion" : user.role === "admin" ? "/metricas" : "/parkings");
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "No pudimos conectar con el servidor.");
       setLoading(false);

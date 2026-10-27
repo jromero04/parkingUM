@@ -118,6 +118,12 @@ def test_headers_and_authentication_are_required(client, auth_headers, create_pa
     assert missing_key.json()["error"]["code"] == "INVALID_IDEMPOTENCY_KEY"
 
 
+def test_admin_cannot_access_personal_reservations(client, admin_headers):
+    response = client.get("/api/v1/reservas", headers=admin_headers)
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "FORBIDDEN"
+
+
 def test_invalid_cursor_uses_contract_error(client, auth_headers):
     response = client.get("/api/v1/reservas?cursor=%%%", headers=auth_headers)
     assert response.status_code == 400

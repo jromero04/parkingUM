@@ -40,7 +40,7 @@ from app.main import app  # noqa: E402
 
 
 @pytest.fixture
-def client():
+def db_session():
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -48,14 +48,19 @@ def client():
     )
     TestingSession = sessionmaker(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)
+    with TestingSession() as session:
+        yield session
+    Base.metadata.drop_all(engine)
+
+
+@pytest.fixture
+def client(db_session):
 
     def override_db():
-        with TestingSession() as session:
-            yield session
+        yield db_session
 
     app.dependency_overrides[get_db] = override_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
-    Base.metadata.drop_all(engine)
 

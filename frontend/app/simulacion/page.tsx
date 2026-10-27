@@ -59,7 +59,7 @@ export default function SimulationPage() {
     }
   }
 
-  return <Protected admin><AppShell title="Simulación de sensores" subtitle="Control aislado para provocar y recuperar fallos reales en el flujo distribuido.">
+  return <Protected roles={["sensor"]}><AppShell title="Simulación de sensores" subtitle="Control aislado para provocar y recuperar fallos reales en el flujo distribuido.">
     <section className="simulation-summary">
       <article><span>Sensores configurados</span><strong>{sensors.length}</strong></article>
       <article><span>Publicando</span><strong>{sensors.length - stopped}</strong></article>
@@ -69,7 +69,6 @@ export default function SimulationPage() {
     <section className="simulation-toolbar">
       <label>Buscar plaza<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. C-12" /></label>
       <label>Estado<select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="all">Todos</option><option value="active">Publicando</option><option value="stopped">Detenidos</option></select></label>
-      <button className="secondary-button" onClick={() => void load()}>Actualizar</button>
     </section>
     {error && <ErrorNotice message={error} />}
     {message && <div className="notice success">{message}</div>}

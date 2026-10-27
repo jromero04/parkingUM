@@ -40,29 +40,30 @@ def api(tmp_path, monkeypatch):
     sensor_states.cache_clear()
 
 
-def test_simulation_requires_admin(api):
+def test_simulation_requires_sensor_role(api):
     client, headers = api
     assert client.get("/api/v1/simulacion/sensores").status_code == 401
     response = client.get("/api/v1/simulacion/sensores", headers=headers("user"))
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "FORBIDDEN"
+    assert client.get("/api/v1/simulacion/sensores", headers=headers("admin")).status_code == 403
 
 
-def test_admin_can_stop_and_recover_one_sensor(api):
+def test_sensor_user_can_stop_and_recover_one_sensor(api):
     client, headers = api
-    admin = headers("admin")
-    listed = client.get("/api/v1/simulacion/sensores", headers=admin)
+    sensor_user = headers("sensor")
+    listed = client.get("/api/v1/simulacion/sensores", headers=sensor_user)
     assert listed.status_code == 200
     assert len(listed.json()) == 168
     assert listed.json()[0]["label"] == "A-01"
 
-    stopped = client.put("/api/v1/simulacion/sensores/C-12", json={"failed": True}, headers=admin)
+    stopped = client.put("/api/v1/simulacion/sensores/C-12", json={"failed": True}, headers=sensor_user)
     assert stopped.status_code == 200
     assert stopped.json()["status"] == "stopped"
     assert stopped.json()["label"] == "C-12"
     assert sum(item["status"] == "stopped" for item in client.get(
-        "/api/v1/simulacion/sensores", headers=admin).json()) == 1
+        "/api/v1/simulacion/sensores", headers=sensor_user).json()) == 1
 
-    recovered = client.put("/api/v1/simulacion/sensores/C-12", json={"failed": False}, headers=admin)
+    recovered = client.put("/api/v1/simulacion/sensores/C-12", json={"failed": False}, headers=sensor_user)
     assert recovered.status_code == 200
     assert recovered.json()["status"] == "active"

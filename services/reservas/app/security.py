@@ -31,8 +31,8 @@ def authenticated_claims(
             options={"require": ["sub", "role", "iss", "aud", "iat", "exp"]},
         )
         payload["sub"] = str(UUID(payload["sub"]))
-        if payload.get("role") not in {"user", "admin"}:
-            raise ValueError("invalid role")
-        return payload
     except (InvalidTokenError, OSError, TypeError, ValueError):
         raise ApiError(401, "UNAUTHORIZED", "El token no es valido.") from None
+    if payload.get("role") != "user":
+        raise ApiError(403, "FORBIDDEN", "El rol no tiene permiso para esta operacion.")
+    return payload

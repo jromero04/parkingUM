@@ -9,7 +9,7 @@ type LoginResponse = { access_token: string; token_type: "bearer"; expires_in: n
 type AuthValue = {
   token: string | null;
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   request: <T>(path: string, options?: RequestInit) => Promise<T>;
@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     setSession({ token: result.access_token, user: result.user });
+    return result.user;
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {

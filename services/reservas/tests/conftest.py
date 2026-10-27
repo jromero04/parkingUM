@@ -88,10 +88,10 @@ def client(db_session, fake_parkings):
     app.dependency_overrides.clear()
 
 
-def token_for(user_id: str) -> str:
+def token_for(user_id: str, role: str = "user") -> str:
     now = datetime.now(timezone.utc)
     payload = {
-        "sub": user_id, "role": "user", "iss": "parking-users", "aud": "parking-api",
+        "sub": user_id, "role": role, "iss": "parking-users", "aud": "parking-api",
         "iat": now, "exp": now + timedelta(hours=1),
     }
     return jwt.encode(payload, (KEY_DIR / "private.pem").read_text(), algorithm="RS256")
@@ -105,6 +105,11 @@ def auth_headers():
 @pytest.fixture
 def other_auth_headers():
     return {"Authorization": f"Bearer {token_for(OTHER_USER_ID)}"}
+
+
+@pytest.fixture
+def admin_headers():
+    return {"Authorization": f"Bearer {token_for(USER_ID, 'admin')}"}
 
 
 @pytest.fixture

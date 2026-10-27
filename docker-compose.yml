@@ -118,6 +118,9 @@ services:
       ADMIN_NAME: ${ADMIN_NAME:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SENSOR_NAME: ${SENSOR_NAME:-}
+      SENSOR_EMAIL: ${SENSOR_EMAIL:-}
+      SENSOR_PASSWORD: ${SENSOR_PASSWORD:-}
     volumes:
       - jwt-keys:/run/parking-keys
     depends_on:
