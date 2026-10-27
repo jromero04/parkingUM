@@ -7,7 +7,7 @@ import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/auth-context";
 import type { Role } from "@/lib/types";
 
-const homeFor = (role: Role) => role === "sensor" ? "/simulacion" : "/parkings";
+const homeFor = (role: Role) => role === "sensor" ? "/simulacion" : role === "admin" ? "/metricas" : "/parkings";
 
 export function Protected({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user } = useAuth();
@@ -27,11 +27,9 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
   const router = useRouter();
   const links = user?.role === "sensor"
     ? [["/simulacion", "Sensores"]]
-    : [
-        ["/parkings", "Estacionamientos"],
-        ["/reservas", "Mis reservas"],
-        ...(user?.role === "admin" ? [["/metricas", "Métricas"]] : []),
-      ];
+    : user?.role === "admin"
+      ? [["/metricas", "Métricas"]]
+      : [["/parkings", "Estacionamientos"], ["/reservas", "Mis reservas"]];
   const home = user ? homeFor(user.role) : "/login";
   return (
     <div className="app-layout">

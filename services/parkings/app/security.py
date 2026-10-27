@@ -30,7 +30,7 @@ def authenticated_claims(
             audience=settings.jwt_audience,
             options={"require": ["sub", "role", "iss", "aud", "iat", "exp"]},
         )
-        if payload.get("role") not in {"user", "admin"}:
+        if payload.get("role") != "user":
             raise ApiError(403, "FORBIDDEN", "El rol no tiene permiso para esta operacion.")
         return payload
     except ApiError:

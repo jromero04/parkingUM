@@ -144,10 +144,10 @@ El registro repetido devuelve 409; no inicia sesión automáticamente. Login inc
 
 | Método y ruta | Acceso | Respuesta |
 |---|---|---|
-| `GET /api/v1/parkings` | Autenticado | 200 colección de `Parking` |
-| `GET /api/v1/parkings/{parking_id}` | Autenticado | 200 `Parking` |
-| `GET /api/v1/parkings/{parking_id}/plazas` | Autenticado | 200 colección de `Spot` |
-| `GET /api/v1/parkings/{parking_id}/plazas/{spot_id}` | Autenticado | 200 `Spot` |
+| `GET /api/v1/parkings` | Solo user | 200 colección de `Parking` |
+| `GET /api/v1/parkings/{parking_id}` | Solo user | 200 `Parking` |
+| `GET /api/v1/parkings/{parking_id}/plazas` | Solo user | 200 colección de `Spot` |
+| `GET /api/v1/parkings/{parking_id}/plazas/{spot_id}` | Solo user | 200 `Spot` |
 
 Listado de plazas admite filtro opcional `availability` con uno de los cuatro valores. Una plaza que no pertenece al parking devuelve 404. La disponibilidad es informativa: obtener `available` no garantiza que una solicitud posterior consiga asignarla.
 
@@ -157,12 +157,12 @@ Estacionamientos, plazas, sensores y admin se cargan con un seed reproducible. N
 
 | Método y ruta | Acceso | Entrada | Respuesta |
 |---|---|---|---|
-| `POST /api/v1/reservas` | Autenticado | `{parking_id,spot_id}` y `Idempotency-Key` | 201 `{reservation:Reservation}` si confirmed; 202 mismo cuerpo si pending; 409 error con `reservation_id` si rejected por conflicto |
-| `GET /api/v1/reservas` | Autenticado | Filtro opcional `status` | 200 colección de reservas del usuario |
+| `POST /api/v1/reservas` | Solo user | `{parking_id,spot_id}` y `Idempotency-Key` | 201 `{reservation:Reservation}` si confirmed; 202 mismo cuerpo si pending; 409 error con `reservation_id` si rejected por conflicto |
+| `GET /api/v1/reservas` | Solo user | Filtro opcional `status` | 200 colección de reservas del usuario |
 | `GET /api/v1/reservas/{reservation_id}` | Propietario | Sin cuerpo | 200 `Reservation` |
 | `POST /api/v1/reservas/{reservation_id}/cancelacion` | Propietario | Sin cuerpo y `Idempotency-Key` | 200 `{reservation:Reservation}` si cancelled; 202 si cancel_pending |
 
-No se acepta `user_id` en el cuerpo. En v1 admin tampoco obtiene acceso implícito a las reservas personales: el dashboard usa agregados de Métricas.
+No se acepta `user_id` en el cuerpo. El rol admin solo accede a Métricas y no puede consultar estacionamientos ni reservas personales.
 
 Para una creación rechazada por parking/plaza inexistente se devuelve 404 con `details.reservation_id` si se alcanzó a persistir la operación; para plaza no disponible, 409 con `details.reason` (`occupied`, `assigned`, `sensor_stale`) y `details.reservation_id`. Si la dependencia todavía no permite determinar el resultado, se conserva pending y se devuelve 202; no se rechaza por adivinar el resultado.
 
