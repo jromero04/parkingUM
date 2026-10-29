@@ -1,15 +1,17 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useId, useMemo, useRef, useState } from "react";
 
-import type { Spot } from "@/lib/types";
+import type { Spot, SpotUsageItem } from "@/lib/types";
 
 type ParkingMapProps = {
   spots: Spot[];
   reservingId?: string | null;
   onReserve?: (spot: Spot) => Promise<void>;
-  mode?: "reservation" | "occupancy";
+  mode?: "reservation" | "occupancy" | "usage";
   occupancyPercentage?: number | null;
+  usageItems?: SpotUsageItem[];
+  totalUses?: number;
 };
 
 type Row = { x: number; y: number; count: number; first: number };
@@ -37,15 +39,20 @@ const STATUS_LABEL = {
   unknown: "Sin datos",
 };
 
-export function ParkingMap({ spots, reservingId = null, onReserve, mode = "reservation", occupancyPercentage = null }: ParkingMapProps) {
+export function ParkingMap({ spots, reservingId = null, onReserve, mode = "reservation", occupancyPercentage = null, usageItems = [], totalUses = 0 }: ParkingMapProps) {
+  const instanceId = useId();
   const byLabel = useMemo(() => Object.fromEntries(spots.map((spot) => [spot.label, spot])), [spots]);
+  const usageBySpot = useMemo(() => Object.fromEntries(usageItems.map((item) => [item.spot_id, item])), [usageItems]);
+  const maximumUses = useMemo(() => Math.max(0, ...usageItems.map((item) => item.uses)), [usageItems]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [mapMessage, setMapMessage] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const occupancyMode = mode === "occupancy";
+  const usageMode = mode === "usage";
   const selected = spots.find((spot) => spot.id === selectedId && (!occupancyMode || spot.availability === "occupied")) ?? null;
+  const selectedUsage = selected ? usageBySpot[selected.id] : null;
   const occupiedSpots = spots.filter((spot) => spot.availability === "occupied");
 
   const counts = spots.reduce((result, spot) => {
@@ -54,7 +61,7 @@ export function ParkingMap({ spots, reservingId = null, onReserve, mode = "reser
   }, { available: 0, reserved: 0, occupied: 0, unknown: 0 });
 
   function choose(spot: Spot) {
-    const selectable = occupancyMode ? spot.availability === "occupied" : spot.availability === "available";
+    const selectable = usageMode || (occupancyMode ? spot.availability === "occupied" : spot.availability === "available");
     if (!selectable) {
       setMapMessage(`La plaza ${spot.label} está ${STATUS_LABEL[spot.availability].toLowerCase()}.`);
       return;
@@ -72,22 +79,30 @@ export function ParkingMap({ spots, reservingId = null, onReserve, mode = "reser
       setMapMessage("Escribí un código válido, por ejemplo C-12.");
       return;
     }
-    document.getElementById(`spot-${spot.id}`)?.focus();
+    document.getElementById(`spot-${instanceId}-${spot.id}`)?.focus();
     choose(spot);
   }
 
-  return <section className={`parking-map-experience${occupancyMode ? " parking-map-occupancy" : ""}`}>
+  function usageColor(uses: number) {
+    if (!uses || !maximumUses) return "#e2e8f0";
+    const intensity = Math.sqrt(uses / maximumUses);
+    return `hsl(${48 - 44 * intensity} 88% ${82 - 34 * intensity}%)`;
+  }
+
+  return <section className={`parking-map-experience${occupancyMode ? " parking-map-occupancy" : ""}${usageMode ? " parking-map-usage" : ""}`}>
     <div className="map-toolbar">
-      <div className="map-legend" aria-label="Referencias">
+      {usageMode ? <div className="usage-map-legend" aria-label="Escala de frecuencia de uso">
+        <span>Sin usos</span><i /><span>Más utilizada</span>
+      </div> : <div className="map-legend" aria-label="Referencias">
         <span><i className="map-dot map-dot-available" />Libre</span>
         <span><i className="map-dot map-dot-reserved" />Reservada</span>
         <span><i className="map-dot map-dot-occupied" />Ocupada</span>
         <span><i className="map-dot map-dot-unknown" />Sin datos</span>
         <span><i className="map-dot map-dot-selected" />{occupancyMode ? "Plaza consultada" : "Tu selección"}</span>
-      </div>
+      </div>}
       <form className="map-search" onSubmit={search}>
-        <label className="sr-only" htmlFor="spot-search">Buscar plaza</label>
-        <input id="spot-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar: C-12" maxLength={6} />
+        <label className="sr-only" htmlFor={`spot-search-${instanceId}`}>Buscar plaza</label>
+        <input id={`spot-search-${instanceId}`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar: C-12" maxLength={6} />
         <button className="secondary-button" type="submit">Ir</button>
         <button className="secondary-button zoom-button" type="button" aria-label="Alejar" onClick={() => setZoom((value) => Math.max(1, value - .5))}>−</button>
         <button className="secondary-button zoom-button" type="button" aria-label="Acercar" onClick={() => setZoom((value) => Math.min(2.5, value + .5))}>+</button>
@@ -115,21 +130,30 @@ export function ParkingMap({ spots, reservingId = null, onReserve, mode = "reser
             const spot = byLabel[label];
             if (!spot) return null;
             const isSelected = selected?.id === spot.id;
-            return <rect key={spot.id} id={`spot-${spot.id}`} className={`map-stall map-stall-${spot.availability}${isSelected ? " map-stall-selected" : ""}`}
+            const usage = usageBySpot[spot.id];
+            const usageDescription = `${usage?.uses ?? 0} ${(usage?.uses ?? 0) === 1 ? "uso" : "usos"}`;
+            return <rect key={spot.id} id={`spot-${instanceId}-${spot.id}`} className={`map-stall map-stall-${spot.availability}${usageMode ? " map-stall-usage" : ""}${isSelected ? " map-stall-selected" : ""}`}
+              style={usageMode ? { fill: usageColor(usage?.uses ?? 0) } : undefined}
               x={row.x} y={row.y + index * 12} width="18" height="12" rx="1.5" role="button"
-              tabIndex={(occupancyMode ? spot.availability === "occupied" : spot.availability === "available") ? 0 : -1} aria-label={`Plaza ${label}, ${STATUS_LABEL[spot.availability].toLowerCase()}`}
+              tabIndex={(usageMode || (occupancyMode ? spot.availability === "occupied" : spot.availability === "available")) ? 0 : -1} aria-label={usageMode ? `Plaza ${label}, ${usageDescription}` : `Plaza ${label}, ${STATUS_LABEL[spot.availability].toLowerCase()}`}
               onClick={() => choose(spot)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); choose(spot); } }}>
-              <title>{label} · {STATUS_LABEL[spot.availability]}</title>
+              <title>{usageMode ? `${label} · ${usageDescription}` : `${label} · ${STATUS_LABEL[spot.availability]}`}</title>
             </rect>;
           })))}
         </svg>
       </div>
 
       <aside className="map-selection" aria-live="polite">
-        <div className="map-counts">
+        {!usageMode && <div className="map-counts">
           <span><strong>{counts.available}</strong> libres</span><span><strong>{counts.reserved}</strong> reservadas</span>
           <span><strong>{counts.occupied}</strong> ocupadas</span><span><strong>{counts.unknown}</strong> sin datos</span>
-        </div>
+        </div>}
+        {usageMode && <div className="usage-map-summary">
+          <p className="eyebrow">Frecuencia histórica</p>
+          <strong>{totalUses}</strong>
+          <p>{totalUses === 1 ? "uso completado" : "usos completados"} en el período</p>
+          <small>El color se calcula respecto de la plaza más utilizada.</small>
+        </div>}
         {occupancyMode && <div className="occupancy-map-summary">
           <p className="eyebrow">Ocupación actual</p>
           <strong>{occupancyPercentage === null ? "—" : `${occupancyPercentage}%`}</strong>
@@ -141,17 +165,21 @@ export function ParkingMap({ spots, reservingId = null, onReserve, mode = "reser
           </div>
         </div>}
         {selected ? <>
-          <p className="eyebrow">{occupancyMode ? "Plaza ocupada" : "Plaza seleccionada"}</p><h2>{selected.label}</h2>
-          <p className="muted">Zona {selected.label.split("-")[0]} · Sensor {selected.sensor_status === "fresh" ? "actualizado" : "sin datos recientes"}</p>
-          <dl className="map-spot-details">
+          <p className="eyebrow">{usageMode ? "Frecuencia de uso" : occupancyMode ? "Plaza ocupada" : "Plaza seleccionada"}</p><h2>{selected.label}</h2>
+          <p className="muted">{usageMode ? `Zona ${selected.label.split("-")[0]}` : `Zona ${selected.label.split("-")[0]} · Sensor ${selected.sensor_status === "fresh" ? "actualizado" : "sin datos recientes"}`}</p>
+          {usageMode ? <dl className="map-spot-details">
+            <div><dt>Usos</dt><dd>{selectedUsage?.uses ?? 0}</dd></div>
+            <div><dt>Participación</dt><dd>{selectedUsage?.percentage ?? 0}%</dd></div>
+            <div><dt>Último uso</dt><dd>{selectedUsage ? new Date(selectedUsage.last_used_at).toLocaleString("es-UY") : "Sin usos"}</dd></div>
+          </dl> : <dl className="map-spot-details">
             <div><dt>Estado</dt><dd>{STATUS_LABEL[selected.availability]}</dd></div>
             <div><dt>Último reporte</dt><dd>{selected.last_report_at ? new Date(selected.last_report_at).toLocaleTimeString("es-UY") : "Nunca"}</dd></div>
-          </dl>
+          </dl>}
           {!occupancyMode && onReserve && <button className="primary-button full" disabled={selected.availability !== "available" || reservingId !== null} onClick={() => onReserve(selected)}>
             {reservingId === selected.id ? "Reservando…" : "Reservar plaza"}
           </button>}
-          <button className="secondary-button full" type="button" onClick={() => { setSelectedId(null); setMapMessage(null); }}>{occupancyMode ? "Cerrar detalle" : "Cancelar selección"}</button>
-        </> : !occupancyMode && <div className="map-empty-selection"><div className="map-pin">P</div><h2>Ninguna plaza elegida</h2><p className="muted">Seleccioná una plaza libre en el mapa o buscala por su código.</p></div>}
+          <button className="secondary-button full" type="button" onClick={() => { setSelectedId(null); setMapMessage(null); }}>{occupancyMode || usageMode ? "Cerrar detalle" : "Cancelar selección"}</button>
+        </> : usageMode ? <div className="map-empty-selection"><div className="map-pin">%</div><h2>Consultá una plaza</h2><p className="muted">Seleccioná una plaza para ver su frecuencia de uso en el período.</p></div> : !occupancyMode && <div className="map-empty-selection"><div className="map-pin">P</div><h2>Ninguna plaza elegida</h2><p className="muted">Seleccioná una plaza libre en el mapa o buscala por su código.</p></div>}
         {mapMessage && <p className="map-message">{mapMessage}</p>}
       </aside>
     </div>

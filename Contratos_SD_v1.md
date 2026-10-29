@@ -209,7 +209,7 @@ Definiciones:
 - `percentage = 100 * occupied_fresh / fresh_total`, redondeado a 2 decimales; null si fresh_total es 0. No se considera libre una plaza sin información vigente.
 - No se ofrece consistencia instantánea entre componentes. `last_projected_at` indica la última aplicación de un cambio, no acredita que la cola esté al día; puede ser null al inicio. `computed_at` es el momento de la consulta.
 
-`GET /api/v1/metricas/plazas/mas-utilizadas?periodo=30d&limit=10&parking_id=<UUID opcional>` — solo admin. `periodo` acepta `7d`, `30d` o `all`. Cada `reservation.used.v1` se registra una sola vez por reserva y el resultado ordena las plazas por cantidad de usos completados. La respuesta incluye `total_uses` y, por plaza, `uses`, porcentaje sobre el total del período y `last_used_at`.
+`GET /api/v1/metricas/plazas/mas-utilizadas?periodo=30d&limit=10&parking_id=<UUID opcional>` — solo admin. `periodo` acepta `7d`, `30d` o `all` y `limit` admite hasta 250 plazas para alimentar el heatmap. Cada `reservation.used.v1` se registra una sola vez por reserva y el resultado ordena las plazas por cantidad de usos completados. La respuesta incluye `total_uses` y, por plaza, `uses`, porcentaje sobre el total del período y `last_used_at`.
 
 `GET /api/v1/metricas/alertas?parking_id=<UUID opcional>` — solo admin. Colección de alertas activas:
 

@@ -91,6 +91,9 @@ def test_most_used_spots_report_ranks_and_filters_by_period(db_session, client, 
     ).json()
     assert historical["total_uses"] == 3
     assert [item["label"] for item in historical["items"]] == ["A-01", "B-01"]
+    assert client.get(
+        "/api/v1/metricas/plazas/mas-utilizadas?limit=251", headers=admin_headers
+    ).status_code == 422
 
 
 def test_unknown_parking_and_invalid_cursor_use_contract_errors(db_session, client, admin_headers):

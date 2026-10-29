@@ -56,18 +56,20 @@ export type MetricsSummary = {
   consistency: "eventual";
 };
 
+export type SpotUsageItem = {
+  spot_id: string;
+  label: string;
+  uses: number;
+  percentage: number;
+  last_used_at: string;
+};
+
 export type SpotUsageReport = {
   period: "7d" | "30d" | "all";
   from_at: string | null;
   to_at: string;
   total_uses: number;
-  items: Array<{
-    spot_id: string;
-    label: string;
-    uses: number;
-    percentage: number;
-    last_used_at: string;
-  }>;
+  items: SpotUsageItem[];
 };
 
 export type SensorAlert = {

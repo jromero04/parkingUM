@@ -119,7 +119,7 @@ def metric_spots(
 def most_used_spots(
     db: Annotated[Session, Depends(get_db)],
     periodo: Literal["7d", "30d", "all"] = "30d",
-    limit: Annotated[int, Query(ge=1, le=50)] = 10,
+    limit: Annotated[int, Query(ge=1, le=250)] = 10,
     parking_id: UUID | None = None,
 ) -> SpotUsageReport:
     now = datetime.now(timezone.utc)
