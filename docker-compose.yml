@@ -452,6 +452,53 @@ services:
     networks: [backend, edge]
     logging: *default-logging
 
+  loki:
+    image: grafana/loki:3.7.9
+    command: ["-config.file=/etc/loki/config.yml"]
+    ports:
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./infra/observability/loki-config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    networks: [backend, edge]
+    logging: *default-logging
+
+  alloy:
+    image: grafana/alloy:v1.21.2
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    user: "0"
+    ports:
+      - "127.0.0.1:${ALLOY_PORT:-12345}:12345"
+    volumes:
+      - ./infra/observability/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    depends_on:
+      - loki
+    networks: [backend, edge]
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:13.2.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+    networks: [backend, edge]
+    logging: *default-logging
+
 networks:
   backend:
     internal: true
@@ -466,4 +513,7 @@ volumes:
   sensor-state:
   rabbitmq-data:
   jwt-keys:
+  loki-data:
+  alloy-data:
+  grafana-data:
 

@@ -432,6 +432,8 @@ INFO para procesamiento normal; WARNING para conflicto, descarte por antigüedad
 
 Para servicios internos se propaga X-Correlation-ID; para AMQP se copia al sobre y a la propiedad. La correlación no constituye trazas distribuidas. Docker configura rotación y retención; los logs no sustituyen datos de negocio ni registros de entrega.
 
+En el despliegue local, Grafana Alloy descubre los contenedores y centraliza sus salidas en Loki. Loki conserva 30 días de registros en un volumen persistente y Grafana ofrece consulta mediante un datasource y un dashboard aprovisionados. `service`, `level` y las etiquetas estables de Docker Compose se indexan; identificadores de alta cardinalidad como `correlation_id`, `event_id` y los UUID de entidades permanecen en el JSON y se filtran durante la consulta. Las interfaces de observabilidad se publican únicamente sobre localhost.
+
 ## 9. Compatibilidad y responsabilidades de implementación
 
 - Prefijo REST v1 y tipos de evento terminados en .v1. Cambios incompatibles crean v2; añadir un campo opcional puede mantener v1.

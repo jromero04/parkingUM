@@ -30,6 +30,24 @@ Este punto de partida incluye:
 
 El navegador accede a todas las funciones mediante el mismo Gateway; las rutas internas permanecen fuera de la red pública.
 
+## Logs centralizados
+
+La pila local incluye Grafana Alloy, Loki y Grafana. Los servicios continúan escribiendo JSON por `stdout`/`stderr`; Docker conserva una copia local rotada y Alloy descubre los contenedores, agrega etiquetas de Docker Compose y envía cada línea a Loki. Loki persiste los registros durante 30 días en el volumen `loki-data` y Grafana incluye el datasource y el dashboard **Logs del estacionamiento** aprovisionados.
+
+Con la aplicación levantada mediante `docker compose up -d --build`:
+
+- Grafana está disponible en `http://localhost:3000` (por defecto `admin` / `admin`; configure `GRAFANA_ADMIN_PASSWORD` fuera de desarrollo).
+- La interfaz de Alloy está disponible en `http://localhost:12345`.
+- El endpoint de Loki está disponible en `http://localhost:3100/ready` únicamente sobre localhost.
+
+El dashboard permite filtrar por servicio de Docker Compose y nivel. En **Explore** también se pueden buscar campos JSON sin convertir identificadores de alta cardinalidad en etiquetas, por ejemplo:
+
+```logql
+{compose_service="reservas"} | json | correlation_id="<uuid>"
+```
+
+Los datos se conservan al recrear contenedores porque Loki, Alloy y Grafana usan volúmenes administrados por Docker. `docker compose down` no los elimina; `docker compose down -v` sí elimina toda la persistencia local, incluidos los logs.
+
 ## Ejecutar
 
 Requisitos: Docker y Docker Compose.
