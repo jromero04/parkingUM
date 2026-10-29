@@ -589,7 +589,7 @@ button:disabled {
 
 .zoom-button { width: 2.75rem; padding: 0; font-size: 1.25rem; }
 .parking-map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; align-items: start; gap: 1rem; }
-.parking-map-scroll { max-height: 72vh; overflow: auto; border: 1px solid #dce5ee; border-radius: 1rem; background: #ffffff; box-shadow: 0 3px 12px #33415508; }
+.parking-map-scroll { overflow-x: auto; overflow-y: hidden; border: 1px solid #dce5ee; border-radius: 1rem; background: #ffffff; box-shadow: 0 3px 12px #33415508; }
 .parking-map { display: block; min-width: 680px; height: auto; transition: width .2s ease; }
 .map-road { fill: #edf2f7; }
 .map-road-label { fill: #64748b; font-size: 12px; }
@@ -608,6 +608,11 @@ button:disabled {
 .map-stall-unknown { fill: var(--map-unknown); cursor: not-allowed; }
 .map-stall-available:hover, .map-stall-available:focus { opacity: .72; outline: none; }
 .map-stall-selected { fill: var(--map-selected); stroke: #0f172a; stroke-width: 1.8; }
+.parking-map-occupancy { --map-occupied: #e11d48; }
+.parking-map-occupancy .map-stall:not(.map-stall-occupied):not(.map-stall-selected) { opacity: .16; }
+.parking-map-occupancy .map-stall-occupied { cursor: pointer; }
+.parking-map-occupancy .map-stall-occupied:hover,
+.parking-map-occupancy .map-stall-occupied:focus { opacity: .72; outline: none; }
 
 .map-selection { position: sticky; top: 1rem; min-height: 310px; padding: 1.2rem; border: 1px solid #dce5ee; border-radius: 1rem; background: #ffffff; box-shadow: 0 3px 12px #33415508; }
 .map-counts { padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0; color: #64748b; font-size: .72rem; }
@@ -616,6 +621,13 @@ button:disabled {
 .map-selection h2 { margin: 0; font-size: 2.3rem; letter-spacing: -.04em; }
 .map-selection > .muted { margin: .25rem 0 1rem; }
 .map-selection > button + button { margin-top: .55rem; }
+.occupancy-map-summary { padding-bottom: 1rem; border-bottom: 1px solid #e2e8f0; }
+.occupancy-map-summary > strong { display: block; color: #be123c; font-size: 2.3rem; line-height: 1; }
+.occupancy-map-summary > p:not(.eyebrow) { margin: .45rem 0 .8rem; color: #64748b; font-size: .8rem; }
+.occupied-spot-list { display: flex; flex-wrap: wrap; gap: .4rem; max-height: 9rem; overflow: auto; }
+.occupied-spot-list button { min-height: 1.9rem; padding: .25rem .55rem; border: 1px solid #fecdd3; border-radius: .5rem; background: #fff1f2; color: #be123c; font-size: .72rem; font-weight: 800; cursor: pointer; }
+.occupied-spot-list button:hover,
+.occupied-spot-list button.active { border-color: #e11d48; background: #e11d48; color: #ffffff; }
 .map-spot-details { margin: 0 0 1rem; font-size: .8rem; }
 .map-spot-details div { display: flex; justify-content: space-between; gap: 1rem; padding: .6rem 0; border-top: 1px solid #e2e8f0; }
 .map-spot-details dt { color: #64748b; }
@@ -734,10 +746,14 @@ button:disabled {
 }
 
 .status-unknown,
-.status-used,
 .status-cancelled {
   background: #e2e8f0;
   color: #475569;
+}
+
+.status-used {
+  background: #eec588;
+  color: #e99c28;
 }
 
 /* Reservas */
@@ -833,6 +849,14 @@ button:disabled {
 .metric-amber strong {
   color: #a16207;
 }
+
+.metric-action { width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.metric-action:hover,
+.metric-action[aria-expanded="true"] { border-color: #1677c8; box-shadow: 0 0 0 3px #1677c818; transform: translateY(-1px); }
+.metric-action small { color: #1677c8; font-size: .68rem; font-weight: 800; }
+.occupancy-dashboard-panel { margin-top: 1rem; padding: 1rem; border: 1px solid #bae6fd; border-radius: 1rem; background: #f8fcff; }
+.occupancy-dashboard-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.occupancy-dashboard-heading h2 { margin: .2rem 0 0; }
 
 .dashboard-grid {
   display: grid;
@@ -976,6 +1000,8 @@ button:disabled {
 .sensor-table .danger-button { min-width: 7rem; min-height: 2.3rem; }
 .sensor-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 .sensor-actions .occupancy-button { min-width: 8rem; }
+.sensor-actions .occupancy-button-release { border-color: #86efac; background: #dcfce7; color: #166534; }
+.sensor-actions .occupancy-button-release:hover { border-color: #22c55e; background: #bbf7d0; }
 
 /* Adaptación a pantallas pequeñas */
 

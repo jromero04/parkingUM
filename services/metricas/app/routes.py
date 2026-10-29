@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.errors import ApiError
 from app.models import ReservationProjection, SpotProjection
-from app.schemas import AlertsCollection, MetricsSummary, Occupancy, ReservationCounts, SensorAlert, SpotCounts
+from app.schemas import (
+    AlertsCollection, MetricSpotRead, MetricsSummary, Occupancy, ReservationCounts, SensorAlert, SpotCounts,
+)
 from app.security import require_admin
 
 
@@ -87,6 +89,29 @@ def summary(
         last_projected_at=max(projected) if projected else None,
         computed_at=now,
     )
+
+
+@public_router.get("/plazas", response_model=list[MetricSpotRead])
+def metric_spots(
+    db: Annotated[Session, Depends(get_db)],
+    parking_id: UUID | None = None,
+) -> list[MetricSpotRead]:
+    now = datetime.now(timezone.utc)
+    spots, _ = projections(db, parking_id)
+    return [MetricSpotRead(
+        id=value.id,
+        parking_id=value.parking_id,
+        sensor_id=value.sensor_id,
+        label=value.label,
+        physical_occupied=value.physical_occupied,
+        assigned_reservation_id=value.assigned_reservation_id,
+        sensor_status="fresh" if is_fresh(value, now) else "stale",
+        last_report_at=aware(value.last_report_at),
+        sensor_expires_at=aware(value.sensor_expires_at),
+        availability=effective_availability(value, now),
+        version=value.version,
+        updated_at=aware(value.source_updated_at),
+    ) for value in sorted(spots, key=lambda item: item.label)]
 
 
 def encode_cursor(value: SpotProjection) -> str:

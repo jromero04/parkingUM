@@ -92,6 +92,21 @@ class MetricsSummary(BaseModel):
     consistency: Literal["eventual"] = "eventual"
 
 
+class MetricSpotRead(BaseModel):
+    id: UUID
+    parking_id: UUID
+    sensor_id: UUID
+    label: str
+    physical_occupied: bool | None
+    assigned_reservation_id: UUID | None
+    sensor_status: Literal["fresh", "stale"]
+    last_report_at: datetime | None
+    sensor_expires_at: datetime | None
+    availability: Literal["available", "reserved", "occupied", "unknown"]
+    version: int
+    updated_at: datetime
+
+
 class SensorAlert(BaseModel):
     spot_id: UUID
     parking_id: UUID

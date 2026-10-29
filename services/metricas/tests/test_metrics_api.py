@@ -50,6 +50,20 @@ def test_expired_sensor_is_unknown_and_generates_alert(db_session, client, admin
     assert alerts.json()["items"][0]["code"] == "SENSOR_DATA_STALE"
 
 
+def test_admin_can_list_current_spots_for_occupancy_map(db_session, client, admin_headers, user_headers):
+    expires = datetime.now(timezone.utc) + timedelta(minutes=1)
+    project(db_session, parking_event(version=3, availability="occupied", occupied=True,
+                                      assigned=RESERVATION_ID, status="fresh", expires_at=expires))
+
+    response = client.get("/api/v1/metricas/plazas", headers=admin_headers)
+    assert response.status_code == 200
+    assert response.json()[0]["label"] == "A-01"
+    assert response.json()[0]["availability"] == "occupied"
+    assert response.json()[0]["physical_occupied"] is True
+
+    assert client.get("/api/v1/metricas/plazas", headers=user_headers).status_code == 403
+
+
 def test_unknown_parking_and_invalid_cursor_use_contract_errors(db_session, client, admin_headers):
     project(db_session, parking_event())
     missing = client.get(f"/api/v1/metricas/resumen?parking_id={uuid4()}", headers=admin_headers)
