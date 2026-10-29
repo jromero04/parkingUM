@@ -64,6 +64,35 @@ def test_admin_can_list_current_spots_for_occupancy_map(db_session, client, admi
     assert client.get("/api/v1/metricas/plazas", headers=user_headers).status_code == 403
 
 
+def test_most_used_spots_report_ranks_and_filters_by_period(db_session, client, admin_headers):
+    second_spot = str(uuid4())
+    project(db_session, parking_event(version=1, spot_id=SPOT_ID, label="A-01"))
+    project(db_session, parking_event(version=1, spot_id=second_spot, sensor_id=str(uuid4()), label="B-01"))
+    recent = datetime.now(timezone.utc) - timedelta(days=2)
+    project(db_session, reservation_event(version=4, status="used", reservation_id=str(uuid4()),
+                                          spot_id=SPOT_ID, used_at=recent))
+    project(db_session, reservation_event(version=4, status="used", reservation_id=str(uuid4()),
+                                          spot_id=SPOT_ID, used_at=recent + timedelta(hours=1)))
+    project(db_session, reservation_event(version=4, status="used", reservation_id=str(uuid4()),
+                                          spot_id=second_spot,
+                                          used_at=datetime.now(timezone.utc) - timedelta(days=40)))
+
+    recent_report = client.get(
+        "/api/v1/metricas/plazas/mas-utilizadas?periodo=30d", headers=admin_headers
+    )
+    assert recent_report.status_code == 200
+    assert recent_report.json()["total_uses"] == 2
+    assert recent_report.json()["items"][0]["label"] == "A-01"
+    assert recent_report.json()["items"][0]["uses"] == 2
+    assert recent_report.json()["items"][0]["percentage"] == 100.0
+
+    historical = client.get(
+        "/api/v1/metricas/plazas/mas-utilizadas?periodo=all", headers=admin_headers
+    ).json()
+    assert historical["total_uses"] == 3
+    assert [item["label"] for item in historical["items"]] == ["A-01", "B-01"]
+
+
 def test_unknown_parking_and_invalid_cursor_use_contract_errors(db_session, client, admin_headers):
     project(db_session, parking_event())
     missing = client.get(f"/api/v1/metricas/resumen?parking_id={uuid4()}", headers=admin_headers)

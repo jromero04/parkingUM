@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import ProcessedEvent, ReservationProjection, SpotProjection
+from app.models import ProcessedEvent, ReservationProjection, SpotProjection, SpotUsageRecord
 from app.schemas import EventEnvelope, ParkingData, ReservationData
 
 
@@ -96,6 +96,15 @@ def apply_reservation(session: Session, envelope: EventEnvelope) -> ProjectionRe
     value.failure_code = snapshot.failure_code
     value.version = snapshot.version
     value.projected_at = now_utc()
+    if snapshot.status == "used" and session.get(SpotUsageRecord, entity_id) is None:
+        session.add(SpotUsageRecord(
+            reservation_id=entity_id,
+            event_id=str(envelope.event_id),
+            parking_id=str(snapshot.parking_id),
+            spot_id=str(snapshot.spot_id),
+            used_at=snapshot.used_at or snapshot.updated_at,
+            projected_at=now_utc(),
+        ))
     return ProjectionResult("applied", entity_id, snapshot.version)
 
 

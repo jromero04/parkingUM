@@ -204,10 +204,12 @@ Definiciones:
 
 - `available + reserved + occupied + unknown = total` en una misma lectura de la proyección. Las dos últimas medidas auxiliares no se suman a esa partición.
 - `assigned_total`: plazas con asignación, incluso ocupadas o stale.
-- `confirmed_current`: reservas cuyo último estado proyectado es confirmed. Puede diferir temporalmente de las asignaciones de Parkings.
+- `confirmed_current`: reservas cuyo último estado proyectado es confirmed u occupied. Puede diferir temporalmente de las asignaciones de Parkings.
 - `created_total`: reservas con `ever_confirmed=true`. `cancelled_total`: reservas cancelled y ever_confirmed=true. Ambas son acumuladas desde el inicio del prototipo, no por día.
 - `percentage = 100 * occupied_fresh / fresh_total`, redondeado a 2 decimales; null si fresh_total es 0. No se considera libre una plaza sin información vigente.
 - No se ofrece consistencia instantánea entre componentes. `last_projected_at` indica la última aplicación de un cambio, no acredita que la cola esté al día; puede ser null al inicio. `computed_at` es el momento de la consulta.
+
+`GET /api/v1/metricas/plazas/mas-utilizadas?periodo=30d&limit=10&parking_id=<UUID opcional>` — solo admin. `periodo` acepta `7d`, `30d` o `all`. Cada `reservation.used.v1` se registra una sola vez por reserva y el resultado ordena las plazas por cantidad de usos completados. La respuesta incluye `total_uses` y, por plaza, `uses`, porcentaje sobre el total del período y `last_used_at`.
 
 `GET /api/v1/metricas/alertas?parking_id=<UUID opcional>` — solo admin. Colección de alertas activas:
 

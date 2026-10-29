@@ -107,6 +107,22 @@ class MetricSpotRead(BaseModel):
     updated_at: datetime
 
 
+class SpotUsageItem(BaseModel):
+    spot_id: UUID
+    label: str
+    uses: int
+    percentage: float
+    last_used_at: datetime
+
+
+class SpotUsageReport(BaseModel):
+    period: Literal["7d", "30d", "all"]
+    from_at: datetime | None
+    to_at: datetime
+    total_uses: int
+    items: list[SpotUsageItem]
+
+
 class SensorAlert(BaseModel):
     spot_id: UUID
     parking_id: UUID

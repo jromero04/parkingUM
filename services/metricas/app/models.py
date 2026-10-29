@@ -62,6 +62,21 @@ class ReservationProjection(Base):
     projected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 
+class SpotUsageRecord(Base):
+    __tablename__ = "spot_usage_records"
+    __table_args__ = (
+        Index("ix_spot_usage_parking_used", "parking_id", "used_at"),
+        Index("ix_spot_usage_spot_used", "spot_id", "used_at"),
+    )
+
+    reservation_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True)
+    parking_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    spot_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    projected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
 class ProcessedEvent(Base):
     __tablename__ = "processed_events"
 

@@ -872,6 +872,23 @@ button:disabled {
   background: #ffffff;
 }
 
+.usage-report-panel { margin-top: 1rem; }
+.usage-report-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
+.usage-report-heading h2 { margin: .2rem 0; }
+.usage-report-heading > div > p:last-child { margin: 0; }
+.usage-report-heading label { display: flex; flex-direction: column; gap: .35rem; color: #64748b; font-size: .7rem; font-weight: 800; text-transform: uppercase; }
+.usage-report-heading select { min-height: 2.6rem; border: 1px solid #cbd5e1; border-radius: .7rem; background: #ffffff; padding: .55rem .8rem; color: #1e293b; font: inherit; text-transform: none; }
+.usage-report-total { margin: 1.2rem 0 .7rem; color: #64748b; font-size: .82rem; }
+.usage-report-total strong { color: #1e293b; font-size: 1.3rem; }
+.usage-ranking { display: grid; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.usage-ranking li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 11rem; align-items: center; gap: .8rem; padding: .75rem; border: 1px solid #e2e8f0; border-radius: .75rem; background: #f8fafc; }
+.usage-rank { display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: 50%; background: #eaf6ff; color: #1677c8; font-size: .8rem; font-weight: 900; }
+.usage-spot > div:first-child { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .4rem; font-size: .8rem; }
+.usage-spot > div:first-child span { color: #64748b; }
+.usage-bar { height: .55rem; overflow: hidden; border-radius: 999px; background: #e2e8f0; }
+.usage-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1677c8, #22a06b); }
+.usage-ranking li > small { color: #64748b; font-size: .7rem; line-height: 1.4; text-align: right; }
+
 .panel h2 {
   margin: .2rem 0 1.2rem;
 }
@@ -1133,6 +1150,10 @@ button:disabled {
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .usage-report-heading { align-items: stretch; flex-direction: column; }
+  .usage-ranking li { grid-template-columns: 2rem minmax(0, 1fr); }
+  .usage-ranking li > small { grid-column: 2; text-align: left; }
 
   .simulation-summary { grid-template-columns: 1fr 1fr; }
   .simulation-summary > article:first-child,

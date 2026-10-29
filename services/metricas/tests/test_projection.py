@@ -1,4 +1,4 @@
-from app.models import ProcessedEvent, ReservationProjection, SpotProjection
+from app.models import ProcessedEvent, ReservationProjection, SpotProjection, SpotUsageRecord
 from app.projection import process_event
 from app.schemas import EventEnvelope
 
@@ -36,3 +36,12 @@ def test_compatible_unknown_fields_are_ignored(db_session):
     event["future"] = "ignored"
     event["data"]["spot"]["future"] = "ignored"
     assert apply(db_session, event).status == "applied"
+
+
+def test_used_reservation_creates_one_idempotent_usage_record(db_session):
+    event = reservation_event(version=4, status="used")
+    assert apply(db_session, event).status == "applied"
+    assert apply(db_session, event).status == "duplicate"
+    usage = db_session.get(SpotUsageRecord, RESERVATION_ID)
+    assert usage.spot_id == SPOT_ID
+    assert db_session.query(SpotUsageRecord).count() == 1

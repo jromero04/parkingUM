@@ -82,13 +82,14 @@ def user_headers():
 
 
 def parking_event(version=1, availability="unknown", occupied=None, assigned=None, event_id=None,
-                  status="stale", expires_at=None):
+                  status="stale", expires_at=None, spot_id=SPOT_ID, parking_id=PARKING_ID,
+                  sensor_id=SENSOR_ID, label="A-01"):
     now = datetime.now(timezone.utc)
     return {
         "event_id": event_id or str(uuid4()), "event_type": "parking.spot_initialized.v1",
         "schema_version": 1, "occurred_at": now.isoformat(), "producer": "parkings",
         "correlation_id": str(uuid4()), "data": {"reason": "test", "spot": {
-            "id": SPOT_ID, "parking_id": PARKING_ID, "sensor_id": SENSOR_ID, "label": "A-01",
+            "id": spot_id, "parking_id": parking_id, "sensor_id": sensor_id, "label": label,
             "physical_occupied": occupied, "assigned_reservation_id": assigned,
             "sensor_status": status, "last_report_at": now.isoformat() if occupied is not None else None,
             "sensor_expires_at": expires_at.isoformat() if expires_at else None,
@@ -97,16 +98,25 @@ def parking_event(version=1, availability="unknown", occupied=None, assigned=Non
     }
 
 
-def reservation_event(version=2, status="confirmed", ever_confirmed=True, event_id=None):
-    now = datetime.now(timezone.utc)
+def reservation_event(version=2, status="confirmed", ever_confirmed=True, event_id=None,
+                      reservation_id=RESERVATION_ID, spot_id=SPOT_ID, parking_id=PARKING_ID,
+                      used_at=None):
+    now = used_at or datetime.now(timezone.utc)
+    event_type = {
+        "cancelled": "reservation.cancelled.v1",
+        "occupied": "reservation.occupied.v1",
+        "used": "reservation.used.v1",
+    }.get(status, "reservation.created.v1")
     return {
         "event_id": event_id or str(uuid4()),
-        "event_type": "reservation.cancelled.v1" if status == "cancelled" else "reservation.created.v1",
+        "event_type": event_type,
         "schema_version": 1, "occurred_at": now.isoformat(), "producer": "reservas",
         "correlation_id": str(uuid4()), "data": {"reservation": {
-            "id": RESERVATION_ID, "user_id": USER_ID, "parking_id": PARKING_ID, "spot_id": SPOT_ID,
+            "id": reservation_id, "user_id": USER_ID, "parking_id": parking_id, "spot_id": spot_id,
             "status": status, "ever_confirmed": ever_confirmed, "created_at": now.isoformat(),
             "updated_at": now.isoformat(), "confirmed_at": now.isoformat() if ever_confirmed else None,
+            "occupied_at": now.isoformat() if status in {"occupied", "used"} else None,
+            "used_at": now.isoformat() if status == "used" else None,
             "cancelled_at": now.isoformat() if status == "cancelled" else None,
             "failure_code": None, "version": version,
         }},
