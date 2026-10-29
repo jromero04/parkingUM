@@ -14,7 +14,7 @@ export default function SimulationPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"all" | "active" | "stopped">("all");
   const [loading, setLoading] = useState(true);
-  const [changing, setChanging] = useState<string | null>(null);
+  const [changing, setChanging] = useState<{ label: string; action: "failure" | "occupancy" } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ export default function SimulationPage() {
   const stopped = sensors.filter((sensor) => sensor.status === "stopped").length;
 
   async function setFailure(sensor: SimulatedSensor, failed: boolean) {
-    setChanging(sensor.label); setError(null); setMessage(null);
+    setChanging({ label: sensor.label, action: "failure" }); setError(null); setMessage(null);
     try {
       const updated = await request<SimulatedSensor>(`/api/v1/simulacion/sensores/${sensor.label}`, {
         method: "PUT", body: JSON.stringify({ failed }),
@@ -59,12 +59,29 @@ export default function SimulationPage() {
     }
   }
 
+  async function setOccupancy(sensor: SimulatedSensor, occupied: boolean) {
+    setChanging({ label: sensor.label, action: "occupancy" }); setError(null); setMessage(null);
+    try {
+      const updated = await request<SimulatedSensor>(`/api/v1/simulacion/sensores/${sensor.label}/occupancy`, {
+        method: "PUT", body: JSON.stringify({ occupied }),
+      });
+      setSensors((items) => items.map((item) => item.label === updated.label ? updated : item));
+      setMessage(occupied
+        ? `Auto detectado en ${sensor.label}. El dashboard se actualizará al procesarse el próximo reporte.`
+        : `Plaza ${sensor.label} liberada. El dashboard se actualizará al procesarse el próximo reporte.`);
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "No se pudo cambiar la ocupación del sensor.");
+    } finally {
+      setChanging(null);
+    }
+  }
+
   return <Protected roles={["sensor"]}><AppShell title="Simulación de sensores" subtitle="Control aislado para provocar y recuperar fallos reales en el flujo distribuido.">
     <section className="simulation-summary">
       <article><span>Sensores configurados</span><strong>{sensors.length}</strong></article>
       <article><span>Publicando</span><strong>{sensors.length - stopped}</strong></article>
       <article className={stopped ? "simulation-alert-count" : ""}><span>Detenidos</span><strong>{stopped}</strong></article>
-      <div><strong>Cómo funciona</strong><p>Al detener un sensor deja de emitir heartbeats. Parkings lo marcará sin datos vigentes y Métricas mostrará la alerta automáticamente.</p></div>
+      <div><strong>Cómo funciona</strong><p>Podés detener los reportes o simular un auto. Parkings procesará el próximo reporte y el dashboard reflejará el cambio automáticamente.</p></div>
     </section>
     <section className="simulation-toolbar">
       <label>Buscar plaza<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. C-12" /></label>
@@ -78,9 +95,14 @@ export default function SimulationPage() {
           <td><strong>{sensor.label}</strong></td><td><code>{sensor.sensor_id.slice(0, 8)}</code></td><td>{sensor.sequence}</td>
           <td>{sensor.physical_occupied ? "Ocupada" : "Libre"}</td>
           <td><span className={`sensor-state sensor-state-${sensor.status}`}><i />{sensor.status === "active" ? "Publicando" : "Detenido"}</span></td>
-          <td>{sensor.status === "active"
-            ? <button className="danger-button" disabled={changing === sensor.label} onClick={() => void setFailure(sensor, true)}>{changing === sensor.label ? "Deteniendo…" : "Detener"}</button>
-            : <button className="primary-button" disabled={changing === sensor.label} onClick={() => void setFailure(sensor, false)}>{changing === sensor.label ? "Reactivando…" : "Reactivar"}</button>}</td>
+          <td><div className="sensor-actions">
+            {sensor.status === "active"
+              ? <button className="danger-button" disabled={changing?.label === sensor.label} onClick={() => void setFailure(sensor, true)}>{changing?.label === sensor.label && changing.action === "failure" ? "Deteniendo…" : "Detener"}</button>
+              : <button className="primary-button" disabled={changing?.label === sensor.label} onClick={() => void setFailure(sensor, false)}>{changing?.label === sensor.label && changing.action === "failure" ? "Reactivando…" : "Reactivar"}</button>}
+            <button className="secondary-button occupancy-button" disabled={changing?.label === sensor.label || sensor.status === "stopped"} onClick={() => void setOccupancy(sensor, !sensor.physical_occupied)}>
+              {changing?.label === sensor.label && changing.action === "occupancy" ? "Actualizando…" : sensor.physical_occupied ? "Liberar plaza" : "Simular auto"}
+            </button>
+          </div></td>
         </tr>)}</tbody></table></div>}
   </AppShell></Protected>;
 }

@@ -29,11 +29,13 @@ class ReservationSnapshot(CompatibleModel):
     user_id: UUID
     parking_id: UUID
     spot_id: UUID
-    status: Literal["pending", "confirmed", "cancel_pending", "cancelled", "rejected"]
+    status: Literal["pending", "confirmed", "occupied", "used", "cancel_pending", "cancelled", "rejected"]
     ever_confirmed: bool
     created_at: datetime
     updated_at: datetime
     confirmed_at: datetime | None
+    occupied_at: datetime | None = None
+    used_at: datetime | None = None
     cancelled_at: datetime | None
     failure_code: str | None
     version: int

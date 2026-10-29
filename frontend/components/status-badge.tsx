@@ -4,6 +4,7 @@ const labels: Record<Availability | ReservationStatus, string> = {
   available: "Disponible",
   reserved: "Reservada",
   occupied: "Ocupada",
+  used: "Utilizada",
   unknown: "Sin datos",
   pending: "Pendiente",
   confirmed: "Confirmada",

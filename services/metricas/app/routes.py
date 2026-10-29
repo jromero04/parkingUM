@@ -76,7 +76,7 @@ def summary(
             physically_occupied_fresh=occupied_fresh,
         ),
         reservations=ReservationCounts(
-            confirmed_current=sum(value.status == "confirmed" for value in reservations),
+            confirmed_current=sum(value.status in {"confirmed", "occupied"} for value in reservations),
             created_total=sum(value.ever_confirmed for value in reservations),
             cancelled_total=sum(value.status == "cancelled" and value.ever_confirmed for value in reservations),
         ),

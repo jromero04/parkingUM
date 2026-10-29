@@ -281,6 +281,30 @@ services:
     networks: [backend]
     logging: *default-logging
 
+  reservas-parking-worker:
+    build:
+      context: ./services/reservas
+      target: runtime
+    command: ["python", "-m", "app.parking_worker"]
+    environment:
+      SERVICE_NAME: reservas-parking
+      DATABASE_URL: ${RESERVAS_DATABASE_URL:-postgresql+psycopg://reservas_app:dev-only-password@reservas-db:5432/reservas_db}
+      PARKINGS_URL: http://parkings:8000
+      RESERVATIONS_SERVICE_TOKEN: ${RESERVATIONS_SERVICE_TOKEN:-dev-only-reservations-token}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
+    depends_on:
+      reservas:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "WORKER_MODULE=app.parking_worker python scripts/worker_healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *default-logging
+
   metricas:
     build:
       context: ./services/metricas

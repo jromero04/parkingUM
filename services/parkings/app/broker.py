@@ -10,6 +10,7 @@ DLX = "system.dlx"
 RETRY_EXCHANGE = "system.retry"
 SENSOR_QUEUE = "parkings.sensor.q"
 METRICS_QUEUE = "metricas.parking.q"
+RESERVATIONS_QUEUE = "reservas.parking.q"
 PARKING_EVENT_TYPES = (
     "parking.spot_initialized.v1",
     "parking.availability_changed.v1",
@@ -56,3 +57,15 @@ def declare_topology(channel) -> None:
     )
     for event_type in PARKING_EVENT_TYPES:
         channel.queue_bind(queue=METRICS_QUEUE, exchange=PARKING_EXCHANGE, routing_key=event_type)
+    channel.queue_declare(queue=f"{RESERVATIONS_QUEUE}.dlq", durable=True)
+    channel.queue_bind(queue=f"{RESERVATIONS_QUEUE}.dlq", exchange=DLX, routing_key=RESERVATIONS_QUEUE)
+    channel.queue_declare(
+        queue=RESERVATIONS_QUEUE,
+        durable=True,
+        arguments={"x-dead-letter-exchange": DLX, "x-dead-letter-routing-key": RESERVATIONS_QUEUE},
+    )
+    channel.queue_bind(
+        queue=RESERVATIONS_QUEUE,
+        exchange=PARKING_EXCHANGE,
+        routing_key="parking.availability_changed.v1",
+    )

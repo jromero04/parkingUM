@@ -27,7 +27,7 @@ export type Spot = {
   updated_at: string;
 };
 
-export type ReservationStatus = "pending" | "confirmed" | "cancel_pending" | "cancelled" | "rejected";
+export type ReservationStatus = "pending" | "confirmed" | "occupied" | "used" | "cancel_pending" | "cancelled" | "rejected";
 
 export type Reservation = {
   id: string;
@@ -39,6 +39,8 @@ export type Reservation = {
   created_at: string;
   updated_at: string;
   confirmed_at: string | null;
+  occupied_at: string | null;
+  used_at: string | null;
   cancelled_at: string | null;
   failure_code: string | null;
   version: number;

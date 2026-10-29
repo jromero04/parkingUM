@@ -734,6 +734,7 @@ button:disabled {
 }
 
 .status-unknown,
+.status-used,
 .status-cancelled {
   background: #e2e8f0;
   color: #475569;
@@ -971,7 +972,10 @@ button:disabled {
 .sensor-state-stopped { color: #be123c; }
 .sensor-state-stopped i { background: #e11d48; box-shadow: 0 0 0 3px #ffe4e6; }
 .sensor-table .primary-button,
+.sensor-table .secondary-button,
 .sensor-table .danger-button { min-width: 7rem; min-height: 2.3rem; }
+.sensor-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.sensor-actions .occupancy-button { min-width: 8rem; }
 
 /* Adaptación a pantallas pequeñas */
 

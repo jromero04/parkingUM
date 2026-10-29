@@ -372,6 +372,14 @@ def release_assignment(
 
     changed_spot = None
     if assignment.status == "assigned" and assignment.spot_id is not None:
+        assigned_spot = db.scalar(select(Spot).where(Spot.id == assignment.spot_id).with_for_update())
+        if assigned_spot is not None and assigned_spot.physical_occupied is True:
+            raise ApiError(
+                409,
+                "RESERVATION_IN_USE",
+                "La reserva no se puede cancelar mientras la plaza esta ocupada.",
+                {"reason": "occupied", "reservation_id": reservation_value},
+            )
         result = db.execute(
             update(Spot)
             .where(Spot.id == assignment.spot_id, Spot.assigned_reservation_id == reservation_value)

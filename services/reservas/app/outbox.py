@@ -26,6 +26,8 @@ def reservation_snapshot(value: Reservation) -> dict:
         "created_at": rfc3339(value.created_at),
         "updated_at": rfc3339(value.updated_at),
         "confirmed_at": rfc3339(value.confirmed_at),
+        "occupied_at": rfc3339(value.occupied_at),
+        "used_at": rfc3339(value.used_at),
         "cancelled_at": rfc3339(value.cancelled_at),
         "failure_code": value.failure_code,
         "version": value.version,

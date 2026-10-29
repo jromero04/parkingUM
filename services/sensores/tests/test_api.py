@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 
 from app.config import get_settings
-from app.fleet import sensor_states
+from app.fleet import sensor_definitions, sensor_states
 from app.main import app
 
 
@@ -67,3 +67,42 @@ def test_sensor_user_can_stop_and_recover_one_sensor(api):
     recovered = client.put("/api/v1/simulacion/sensores/C-12", json={"failed": False}, headers=sensor_user)
     assert recovered.status_code == 200
     assert recovered.json()["status"] == "active"
+
+
+def test_sensor_user_can_simulate_vehicle_occupancy(api):
+    client, headers = api
+    sensor_user = headers("sensor")
+
+    occupied = client.put(
+        "/api/v1/simulacion/sensores/C-12/occupancy",
+        json={"occupied": True},
+        headers=sensor_user,
+    )
+    assert occupied.status_code == 200
+    assert occupied.json()["label"] == "C-12"
+    assert occupied.json()["physical_occupied"] is True
+
+    sensor = next(item for item in client.get(
+        "/api/v1/simulacion/sensores", headers=sensor_user).json() if item["label"] == "C-12")
+    assert sensor["physical_occupied"] is True
+    state = next(state for definition, state in zip(sensor_definitions(), sensor_states())
+                 if definition["label"] == "C-12")
+    assert state.prepare_event()["data"]["physical_occupied"] is True
+
+    released = client.put(
+        "/api/v1/simulacion/sensores/C-12/occupancy",
+        json={"occupied": False},
+        headers=sensor_user,
+    )
+    assert released.status_code == 200
+    assert released.json()["physical_occupied"] is False
+
+
+def test_occupancy_simulation_requires_sensor_role(api):
+    client, headers = api
+    response = client.put(
+        "/api/v1/simulacion/sensores/A-01/occupancy",
+        json={"occupied": True},
+        headers=headers("admin"),
+    )
+    assert response.status_code == 403

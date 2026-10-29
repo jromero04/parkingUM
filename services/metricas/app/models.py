@@ -41,7 +41,7 @@ class ReservationProjection(Base):
     __tablename__ = "reservation_projections"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'confirmed', 'cancel_pending', 'cancelled', 'rejected')",
+            "status IN ('pending', 'confirmed', 'occupied', 'used', 'cancel_pending', 'cancelled', 'rejected')",
             name="ck_metric_reservation_status",
         ),
         Index("ix_metric_reservations_parking_id", "parking_id", "id"),

@@ -15,7 +15,7 @@ class Reservation(Base):
     __tablename__ = "reservations"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('pending', 'confirmed', 'cancel_pending', 'cancelled', 'rejected')",
+            "status IN ('pending', 'confirmed', 'occupied', 'used', 'cancel_pending', 'cancelled', 'rejected')",
             name="ck_reservations_status",
         ),
         Index("ix_reservations_user_created_id", "user_id", "created_at", "id"),
@@ -33,6 +33,8 @@ class Reservation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    occupied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)

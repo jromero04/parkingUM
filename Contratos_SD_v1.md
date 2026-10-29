@@ -108,11 +108,11 @@ La vigencia se calcula con la fecha de observación aceptada: `ahora < sensor_ex
 3. Información fresh, físicamente libre y asignada → `reserved`.
 4. Información fresh, físicamente libre y sin asignación → `available`.
 
-Los campos originales se conservan: `unknown` no borra la reserva ni el último estado físico. Una plaza ocupada puede conservar una reserva. No hay finalización automática de reservas por eventos físicos en v1.
+Los campos originales se conservan: `unknown` no borra la reserva ni el último estado físico. Una plaza ocupada conserva su asignación mientras está en uso. La transición física de ocupada a libre finaliza la reserva y libera automáticamente la asignación.
 
-**Reservation**: `id`, `user_id`, `parking_id`, `spot_id`, `status`, `ever_confirmed`, `created_at`, `updated_at`, `confirmed_at` (fecha/null), `cancelled_at` (fecha/null), `failure_code` (string/null), `version`.
+**Reservation**: `id`, `user_id`, `parking_id`, `spot_id`, `status`, `ever_confirmed`, `created_at`, `updated_at`, `confirmed_at` (fecha/null), `occupied_at` (fecha/null), `used_at` (fecha/null), `cancelled_at` (fecha/null), `failure_code` (string/null), `version`.
 
-Estados: `pending`, `confirmed`, `cancel_pending`, `cancelled`, `rejected`. `ever_confirmed` comienza en false y solo puede pasar a true cuando Reservas confirma de forma persistente. Una asignación física pendiente de recuperación no equivale todavía a reserva confirmada.
+Estados: `pending`, `confirmed`, `occupied`, `used`, `cancel_pending`, `cancelled`, `rejected`. `ever_confirmed` comienza en false y solo puede pasar a true cuando Reservas confirma de forma persistente. Una asignación física pendiente de recuperación no equivale todavía a reserva confirmada. Una reserva confirmada pasa a `occupied` cuando su sensor detecta un vehículo y a `used` cuando vuelve a detectar la plaza libre.
 
 No se limita a una reserva por usuario en v1. Cada plaza sí admite una sola asignación. No hay horarios, pago ni vencimiento automático de una reserva confirmada.
 
@@ -170,7 +170,7 @@ Las respuestas 201/202 incluyen `Location: /api/v1/reservas/{id}`. Las respuesta
 
 **Idempotencia pública:** la clave se identifica por `(user_id, Idempotency-Key)` y se guarda persistentemente, con ruta, método, cuerpo normalizado, ID de reserva y resultado. La misma clave y solicitud nunca crean otra reserva ni otra cancelación. Una clave reutilizada con datos/ruta distintos devuelve 409. Las operaciones terminales conservan su resultado inicial de operación; para conocer el estado actual de una reserva que luego se canceló se usa GET. Una repetición de una operación aún pendiente puede devolver su resultado actualizado. Las claves y resultados se retienen durante todo el prototipo.
 
-Una cancelación con nueva clave sobre una reserva ya cancelled devuelve 200 sin repetir efectos. Sobre rejected devuelve 409 `RESERVATION_TERMINAL`. Se permite cancelar pending; pasa a cancel_pending y se resuelve con el cierre interno de asignación. No se permite reactivar una reserva cancelled o rejected.
+Una cancelación con nueva clave sobre una reserva ya cancelled devuelve 200 sin repetir efectos. Sobre rejected o used devuelve 409 `RESERVATION_TERMINAL`; sobre occupied devuelve 409 `RESERVATION_IN_USE`. Se permite cancelar pending; pasa a cancel_pending y se resuelve con el cierre interno de asignación. No se permite reactivar una reserva cancelled, rejected o used.
 
 ### 3.4 Métricas y dashboard
 
@@ -247,7 +247,7 @@ Registro de asignación: `{reservation_id,parking_id,spot_id,operation_id,status
 - Asignar ejecuta en una transacción local el registro de operación, la comprobación/actualización condicional de plaza y su outbox. No usa un lock solo en memoria como garantía.
 - En éxito se guarda assigned. En rechazo definitivo se guarda rejected y se devuelve 409 `SPOT_UNAVAILABLE` o 404 según corresponda. Repetir no convierte un rechazo en asignación si después cambia la disponibilidad: el usuario debe generar otra reserva.
 - Usar el mismo reservation_id con otro destino u operation_id devuelve 409. Un registro released no puede asignarse nuevamente y devuelve 409 `ASSIGNMENT_CLOSED`.
-- Liberar solo elimina `assigned_reservation_id` si coincide con la reserva solicitada. No altera la ocupación ni el reporte del sensor.
+- Liberar solo elimina `assigned_reservation_id` si coincide con la reserva solicitada y la plaza no está físicamente ocupada. No altera la ocupación ni el reporte del sensor.
 - DELETE crea o actualiza un registro terminal released incluso si la asignación todavía no existe, para impedir que un PUT atrasado asigne después de una cancelación. Este registro de cierre se conserva todo el prototipo.
 - PUT y DELETE para el mismo reservation_id se serializan con una garantía en PostgreSQL, por ejemplo un lock transaccional por clave y restricción única. PUT bloquea/actualiza la plaza en la misma transacción. DELETE no puede ignorar una creación simultánea todavía no visible. No se confía en el orden de llegada de las llamadas HTTP.
 - La transición de asignación y la actualización del sensor sobre una plaza se serializan en PostgreSQL. Si el sensor reporta ocupación después de una asignación válida, se conserva la reserva y la plaza pasa a occupied.
@@ -259,6 +259,8 @@ Transiciones permitidas:
 | Desde | Hacia | Condición |
 |---|---|---|
 | pending | confirmed | Parkings confirma assigned y no hay cancelación aceptada |
+| confirmed | occupied | El sensor de la plaza asignada detecta un vehículo |
+| occupied | used | El sensor vuelve a detectar la plaza libre y se libera la asignación |
 | pending | rejected | Parkings devuelve rechazo definitivo |
 | pending o confirmed | cancel_pending | Usuario solicita cancelar |
 | cancel_pending | cancelled | Parkings confirma el registro released |
@@ -313,6 +315,8 @@ Los sensores generan un correlation_id por reporte. Los eventos derivados de ese
 | `parking.sensor_refreshed.v1` | Parkings | Métricas | Reporte vigente que solo renueva vigencia |
 | `reservation.created.v1` | Reservas | Métricas y Notificaciones | Reserva pasa a confirmed |
 | `reservation.cancelled.v1` | Reservas | Métricas y Notificaciones | Reserva pasa a cancelled, incluso si nunca se confirmó |
+| `reservation.occupied.v1` | Reservas | Métricas | Reserva confirmada comienza a utilizarse |
+| `reservation.used.v1` | Reservas | Métricas | Finaliza el uso y se libera la plaza |
 
 No se publican eventos de reserva confirmada desde Parkings: solo Reservas determina su confirmación. Pending y rejected no cuentan como reservas creadas.
 
@@ -357,7 +361,7 @@ Un heartbeat vigente aumenta version y renueva el snapshot para Métricas, inclu
 
 ### 5.5 Eventos de Reservas
 
-Ambos tipos contienen `data.reservation` con la instantánea completa de Reservation. Para created: status=confirmed, ever_confirmed=true. Para cancelled: status=cancelled; ever_confirmed puede ser false si se canceló mientras estaba pending.
+Los cuatro tipos contienen `data.reservation` con la instantánea completa de Reservation. Para created: status=confirmed, ever_confirmed=true; occupied y used reflejan el ciclo de uso físico; para cancelled: status=cancelled y ever_confirmed puede ser false si se canceló mientras estaba pending.
 
 Métricas guarda la instantánea de mayor version por reserva. `ever_confirmed` y las fechas permiten calcular acumulados aunque cancelled llegue antes que created. Los duplicados o versiones anteriores no incrementan contadores. Preferentemente se calculan indicadores sobre la proyección persistida en lugar de sumar ciegamente +1 por mensaje.
 
@@ -373,8 +377,9 @@ Exchanges topic durables: `sensors.events`, `parking.events`, `reservations.even
 |---|---|
 | `parkings.sensor.q` | sensors.events: `sensor.reported.v1` |
 | `metricas.parking.q` | parking.events: los cinco tipos de Parkings del catálogo, mediante bindings explícitos |
-| `metricas.reservas.q` | reservations.events: `reservation.created.v1`, `reservation.cancelled.v1` |
+| `metricas.reservas.q` | reservations.events: `reservation.created.v1`, `reservation.occupied.v1`, `reservation.used.v1`, `reservation.cancelled.v1` |
 | `notificaciones.reservas.q` | reservations.events: `reservation.created.v1`, `reservation.cancelled.v1` |
+| `reservas.parking.q` | parking.events: `parking.availability_changed.v1` |
 
 Cada cola principal tiene su propia cola final `<cola>.dlq`, enrutada desde `system.dlx` mediante una clave igual al nombre de la cola principal. No se usa TTL en la cola principal ni se borran sus mensajes al cerrar el consumidor. Las colas se declaran antes de aceptar operaciones y se conservan aunque el consumidor esté detenido.
 

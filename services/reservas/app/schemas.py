@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-ReservationStatus = Literal["pending", "confirmed", "cancel_pending", "cancelled", "rejected"]
+ReservationStatus = Literal["pending", "confirmed", "occupied", "used", "cancel_pending", "cancelled", "rejected"]
 
 
 class StrictModel(BaseModel):
@@ -29,6 +29,8 @@ class ReservationRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     confirmed_at: datetime | None
+    occupied_at: datetime | None
+    used_at: datetime | None
     cancelled_at: datetime | None
     failure_code: str | None
     version: int
@@ -41,3 +43,28 @@ class ReservationResponse(BaseModel):
 class ReservationCollection(BaseModel):
     items: list[ReservationRead]
     next_cursor: str | None
+
+
+class CompatibleModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+
+class ParkingSpotSnapshot(CompatibleModel):
+    id: UUID
+    assigned_reservation_id: UUID | None
+    physical_occupied: bool | None
+
+
+class ParkingEventData(CompatibleModel):
+    spot: ParkingSpotSnapshot
+    reason: str
+
+
+class ParkingEventEnvelope(CompatibleModel):
+    event_id: UUID
+    event_type: Literal["parking.availability_changed.v1"]
+    schema_version: Literal[1]
+    occurred_at: datetime
+    producer: str
+    correlation_id: UUID
+    data: ParkingEventData

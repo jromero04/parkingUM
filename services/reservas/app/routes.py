@@ -69,6 +69,15 @@ def raise_creation_error(value: Reservation) -> None:
     raise ApiError(status_code, code, message, details)
 
 
+def cancellation_error(value: Reservation) -> ApiError:
+    details = {"reservation_id": value.id, "status": value.status}
+    if value.status == "occupied":
+        return ApiError(409, "RESERVATION_IN_USE",
+                        "La reserva no se puede cancelar porque la plaza esta ocupada.", details)
+    return ApiError(409, "RESERVATION_TERMINAL",
+                    "La reserva ya fue utilizada y no se puede cancelar.", details)
+
+
 @public_router.post("", response_model=ReservationResponse)
 def create_reservation(
     payload: ReservationCreate,
@@ -226,6 +235,15 @@ def cancel_reservation(
             reservation_id=value.id,
         )
         db.add(record)
+        if value.status in {"occupied", "used"}:
+            error = cancellation_error(value)
+            record.response_status = error.status_code
+            record.response_payload = json.dumps({
+                "status": error.status_code, "code": error.code,
+                "message": error.message, "details": error.details,
+            })
+            db.commit()
+            raise error
         if value.status == "rejected":
             details = {"reservation_id": value.id}
             record.response_status = 409
@@ -254,6 +272,8 @@ def cancel_reservation(
     value = attempt_cancellation(db, value.id, parking_client)
     if value.status == "cancelled":
         return reservation_response(value, status.HTTP_200_OK)
+    if value.status in {"occupied", "used"}:
+        raise cancellation_error(value)
     return reservation_response(value, status.HTTP_202_ACCEPTED, pending=True)
 
 
