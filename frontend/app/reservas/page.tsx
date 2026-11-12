@@ -6,6 +6,7 @@ import { AppShell, EmptyState, ErrorNotice, Protected } from "@/components/app-s
 import { StatusBadge } from "@/components/status-badge";
 import { useAuth } from "@/features/auth/auth-context";
 import { ApiError } from "@/lib/api";
+import { createIdempotencyKey } from "@/lib/idempotency";
 import type { Parking, Reservation, Spot } from "@/lib/types";
 
 type ReservationCollection = { items: Reservation[]; next_cursor: string | null };
@@ -46,7 +47,7 @@ export default function ReservationsPage() {
     try {
       await request(`/api/v1/reservas/${reservation.id}/cancelacion`, {
         method: "POST",
-        headers: { "Idempotency-Key": crypto.randomUUID() },
+        headers: { "Idempotency-Key": createIdempotencyKey() },
       });
       await load();
     } catch (problem) {

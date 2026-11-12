@@ -5,12 +5,14 @@ import time
 
 import pika
 from pydantic import ValidationError
+from prometheus_client import start_http_server
 
 from app.broker import SENSOR_QUEUE, connection, declare_topology
 from app.database import SessionLocal
 from app.logging_config import configure_logging, log_event
 from app.schemas import EventEnvelope
 from app.sensor_processing import UnknownSensorError, mark_expired_sensors, process_sensor_event
+from app.worker_metrics import SENSOR_EVENTS_PROCESSED
 
 
 configure_logging("parkings-sensors")
@@ -41,6 +43,7 @@ def stale_loop() -> None:
 
 
 def run() -> None:
+    start_http_server(8000)
     threading.Thread(target=stale_loop, daemon=True).start()
     while True:
         broker = None
@@ -75,8 +78,10 @@ def run() -> None:
                         spot_id=str(envelope.data.spot_id),
                         event_type=result.event_type,
                     )
+                    SENSOR_EVENTS_PROCESSED.labels(result=result.status).inc()
                     ch.basic_ack(method.delivery_tag)
                 except (json.JSONDecodeError, UnicodeDecodeError, ValidationError, UnknownSensorError, ValueError):
+                    SENSOR_EVENTS_PROCESSED.labels(result="invalid").inc()
                     logger.exception(
                         "Evento de sensor invalido enviado a DLQ",
                         extra={"action": "event_failed", "result": "dlq", "correlation_id": None},
@@ -85,6 +90,9 @@ def run() -> None:
                 except Exception:
                     headers = dict(properties.headers or {})
                     attempt = int(headers.get("x-retry-count", 0))
+                    SENSOR_EVENTS_PROCESSED.labels(
+                        result="dlq" if attempt >= len(RETRY_DELAYS) else "retry"
+                    ).inc()
                     logger.exception(
                         "Fallo transitorio procesando sensor",
                         extra={

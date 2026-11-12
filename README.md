@@ -32,7 +32,7 @@ El navegador accede a todas las funciones mediante el mismo Gateway; las rutas i
 
 ## Logs centralizados
 
-La pila local incluye Grafana Alloy, Loki y Grafana. Los servicios continúan escribiendo JSON por `stdout`/`stderr`; Docker conserva una copia local rotada y Alloy descubre los contenedores, agrega etiquetas de Docker Compose y envía cada línea a Loki. Loki persiste los registros durante 30 días en el volumen `loki-data` y Grafana incluye el datasource y el dashboard **Logs del estacionamiento** aprovisionados.
+La pila local incluye Grafana Alloy, Loki y Grafana. Los servicios continúan escribiendo JSON por `stdout`/`stderr`; Docker conserva una copia local rotada y Alloy descubre los contenedores, agrega etiquetas de Docker Compose y envía cada línea a Loki. Para evitar ruido y realimentación, no reingesta los logs de Alloy, Loki ni Grafana. Los health checks tampoco generan logs HTTP y el simulador publica por defecto cada 30 segundos. Loki persiste los registros durante 30 días en el volumen `loki-data` y Grafana incluye el datasource y el dashboard **Logs del estacionamiento** aprovisionados.
 
 Con la aplicación levantada mediante `docker compose up -d --build`:
 
@@ -40,13 +40,27 @@ Con la aplicación levantada mediante `docker compose up -d --build`:
 - La interfaz de Alloy está disponible en `http://localhost:12345`.
 - El endpoint de Loki está disponible en `http://localhost:3100/ready` únicamente sobre localhost.
 
-El dashboard permite filtrar por servicio de Docker Compose y nivel. En **Explore** también se pueden buscar campos JSON sin convertir identificadores de alta cardinalidad en etiquetas, por ejemplo:
+El dashboard separa servicios de aplicación e infraestructura, permite filtrar por servicio y nivel, y muestra indicadores de errores y advertencias junto con el volumen apilado por nivel. El campo **Correlation ID (regex)** permite seguir una petición en los logs detallados sin convertir identificadores de alta cardinalidad en etiquetas. En **Explore** también se pueden buscar campos JSON, por ejemplo:
 
 ```logql
 {compose_service="reservas"} | json | correlation_id="<uuid>"
 ```
 
 Los datos se conservan al recrear contenedores porque Loki, Alloy y Grafana usan volúmenes administrados por Docker. `docker compose down` no los elimina; `docker compose down -v` sí elimina toda la persistencia local, incluidos los logs.
+
+## Métricas con Prometheus
+
+Prometheus consulta cada 5 segundos el endpoint `/metrics` de las APIs y del worker de sensores, y conserva las series durante 30 días en el volumen `prometheus-data`. Su interfaz está disponible en `http://localhost:9090` únicamente sobre localhost. Grafana incorpora automáticamente el datasource **Prometheus** y el dashboard **Métricas del estacionamiento**.
+
+Las métricas de negocio y operación disponibles son:
+
+- `http_requests_total{service,route,method,status}`;
+- `login_attempts_total{result}`;
+- `reservations_created_total{result}`;
+- `sensor_events_processed_total{result}`;
+- `parking_assignments_total{result}`.
+
+Las rutas se registran usando sus plantillas normalizadas y los contadores no incluyen identificadores de usuarios, reservas, plazas o sensores, para mantener baja la cardinalidad.
 
 ## Ejecutar
 

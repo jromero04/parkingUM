@@ -6,6 +6,7 @@ from fastapi import Request, Response
 
 from app.config import get_settings
 from app.logging_config import log_event
+from app.metrics import record_http_request
 
 
 logger = logging.getLogger("parkings.http")
@@ -21,6 +22,11 @@ def valid_correlation_id(value: str | None) -> str:
 async def correlation_and_logging_middleware(request: Request, call_next) -> Response:
     correlation_id = valid_correlation_id(request.headers.get("X-Correlation-ID"))
     request.state.correlation_id = correlation_id
+    if request.url.path.startswith("/health/"):
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
+
     started = time.perf_counter()
     log_event(
         logger,
@@ -33,6 +39,7 @@ async def correlation_and_logging_middleware(request: Request, call_next) -> Res
     )
     response = await call_next(request)
     response.headers["X-Correlation-ID"] = correlation_id
+    record_http_request(request, response)
     log_event(
         logger,
         "http_completed",

@@ -7,6 +7,8 @@ from uuid import UUID, uuid4
 
 from fastapi import Request
 
+from app.metrics import record_http_request
+
 logger = logging.getLogger("usuarios.http")
 
 
@@ -22,10 +24,16 @@ def valid_correlation_id(value: str | None) -> str:
 async def correlation_and_logging_middleware(request: Request, call_next):
     correlation_id = valid_correlation_id(request.headers.get("X-Correlation-ID"))
     request.state.correlation_id = correlation_id
+    if request.url.path.startswith("/health/"):
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
+
     started = time.perf_counter()
     response = await call_next(request)
     duration_ms = round((time.perf_counter() - started) * 1000, 2)
     response.headers["X-Correlation-ID"] = correlation_id
+    record_http_request(request, response)
     logger.info(
         json.dumps(
             {

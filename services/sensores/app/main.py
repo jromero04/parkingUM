@@ -5,11 +5,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import make_asgi_app
 
 from app.config import get_settings
 from app.errors import install_exception_handlers
 from app.fleet import sensor_states
 from app.logging_config import configure_logging
+from app.metrics import record_http_request
 from app.publisher import run as run_publisher
 from app.routes import health_router, public_router
 
@@ -43,9 +45,11 @@ async def correlation_id(request: Request, call_next):
         request.state.correlation_id = str(uuid.uuid4())
     response = await call_next(request)
     response.headers["X-Correlation-ID"] = request.state.correlation_id
+    record_http_request(request, response)
     return response
 
 
 install_exception_handlers(app)
 app.include_router(public_router)
 app.include_router(health_router)
+app.mount("/metrics", make_asgi_app())

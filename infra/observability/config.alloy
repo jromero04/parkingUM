@@ -1,71 +1,85 @@
 logging {
-  level  = "info"
-  format = "json"
+	level  = "info"
+	format = "json"
 }
 
 discovery.docker "containers" {
-  host             = "unix:///var/run/docker.sock"
-  refresh_interval = "5s"
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "5s"
 }
 
 discovery.relabel "containers" {
-  targets = []
+	targets = []
 
-  rule {
-    source_labels = ["__meta_docker_container_name"]
-    regex         = "/(.*)"
-    target_label  = "container"
-  }
+	// Evita que la propia plataforma de observabilidad genere y reingeste
+	// continuamente sus logs. El resto de la infraestructura queda disponible.
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		regex         = "(alloy|grafana|loki|prometheus)"
+		action        = "drop"
+	}
 
-  rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-    target_label  = "compose_service"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
 
-  rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
-    target_label  = "compose_project"
-  }
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "compose_service"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+		target_label  = "compose_project"
+	}
 }
 
 loki.source.docker "containers" {
-  host             = "unix:///var/run/docker.sock"
-  targets          = discovery.docker.containers.targets
-  relabel_rules    = discovery.relabel.containers.rules
-  refresh_interval = "5s"
-  forward_to       = [loki.process.application.receiver]
+	host             = "unix:///var/run/docker.sock"
+	targets          = discovery.docker.containers.targets
+	relabel_rules    = discovery.relabel.containers.rules
+	refresh_interval = "5s"
+	forward_to       = [loki.process.application.receiver]
 }
 
 loki.process "application" {
-  stage.json {
-    expressions = {
-      application_service = "service",
-      level               = "level",
-    }
-  }
+	stage.json {
+		expressions = {
+			application_service = "service",
+			level               = "level",
+		}
+	}
 
-  stage.labels {
-    values = {
-      application_service = "",
-      level               = "",
-    }
-  }
+	// Evita series separadas para valores equivalentes como "info" e "INFO".
+	stage.template {
+		source   = "level"
+		template = "{{ ToUpper .Value }}"
+	}
 
-  stage.static_labels {
-    values = {
-      environment = "local",
-    }
-  }
+	stage.labels {
+		values = {
+			application_service = "",
+			level               = "",
+		}
+	}
 
-  forward_to = [loki.write.local.receiver]
+	stage.static_labels {
+		values = {
+			environment = "local",
+		}
+	}
+
+	forward_to = [loki.write.local.receiver]
 }
 
 loki.write "local" {
-  endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
-  }
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
 }
 
 livedebugging {
-  enabled = true
+	enabled = true
 }

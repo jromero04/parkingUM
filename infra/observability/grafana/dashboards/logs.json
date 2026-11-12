@@ -2,39 +2,189 @@
   "annotations": { "list": [] },
   "editable": false,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
       "id": 1,
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "single", "sort": "none" }
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto",
+        "wideLayout": true
       },
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "editorMode": "code",
-          "expr": "sum by (compose_service, level) (count_over_time({compose_service=~\"$service\", level=~\"$level\"}[$__auto]))",
-          "legendFormat": "{{compose_service}} {{level}}",
+          "expr": "sum(count_over_time({compose_service=~\"$service\", level=~\"$level\"}[$__range]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Eventos en el período",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({compose_service=~\"$service\", level=~\"(?i)error\"}[$__range]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Errores",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "editorMode": "code",
+          "expr": "sum(count_over_time({compose_service=~\"$service\", level=~\"(?i)warn(ing)?\"}[$__range]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Advertencias",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Eventos",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "gradientMode": "opacity",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 3,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "normal" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 4 },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": ["sum"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "editorMode": "code",
+          "expr": "sum by (level) (count_over_time({compose_service=~\"$service\", level=~\"$level\"}[$__auto]))",
+          "legendFormat": "{{level}}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Eventos por servicio y nivel",
+      "title": "Volumen de eventos por nivel",
       "type": "timeseries"
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 8 },
-      "id": 2,
+      "gridPos": { "h": 15, "w": 24, "x": 0, "y": 13 },
+      "id": 5,
       "options": {
         "dedupStrategy": "none",
-        "enableInfiniteScrolling": false,
+        "enableInfiniteScrolling": true,
         "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": false,
@@ -46,12 +196,12 @@
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "editorMode": "code",
-          "expr": "{compose_service=~\"$service\", level=~\"$level\"} | json",
+          "expr": "{compose_service=~\"$service\", level=~\"$level\"} | json | correlation_id=~\"${correlation_id:raw}\"",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Logs",
+      "title": "Logs detallados",
       "type": "logs"
     }
   ],
@@ -61,14 +211,41 @@
   "templating": {
     "list": [
       {
-        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": "Aplicación",
+          "value": "(frontend|gateway|usuarios|parkings|parkings-sensor-worker|parkings-outbox-worker|reservas|reservas-recovery-worker|reservas-outbox-worker|reservas-parking-worker|metricas|metricas-worker|notificaciones-worker|sensores)"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Ámbito",
+        "multi": false,
+        "name": "scope",
+        "options": [
+          {
+            "selected": true,
+            "text": "Aplicación",
+            "value": "(frontend|gateway|usuarios|parkings|parkings-sensor-worker|parkings-outbox-worker|reservas|reservas-recovery-worker|reservas-outbox-worker|reservas-parking-worker|metricas|metricas-worker|notificaciones-worker|sensores)"
+          },
+          {
+            "selected": false,
+            "text": "Infraestructura",
+            "value": "(postgres|parkings-db|reservas-db|metricas-db|notificaciones-db|rabbitmq|loki|alloy|grafana)"
+          },
+          { "selected": false, "text": "Todo", "value": ".+" }
+        ],
+        "query": "Aplicación : (frontend|gateway|usuarios|parkings|parkings-sensor-worker|parkings-outbox-worker|reservas|reservas-recovery-worker|reservas-outbox-worker|reservas-parking-worker|metricas|metricas-worker|notificaciones-worker|sensores),Infraestructura : (postgres|parkings-db|reservas-db|metricas-db|notificaciones-db|rabbitmq|loki|alloy|grafana),Todo : .+",
+        "type": "custom"
+      },
+      {
         "current": { "selected": true, "text": "All", "value": "$__all" },
         "datasource": { "type": "loki", "uid": "loki" },
-        "definition": "label_values(compose_service)",
+        "definition": "label_values({compose_service=~\"$scope\"}, compose_service)",
         "includeAll": true,
         "label": "Servicio",
+        "multi": true,
         "name": "service",
-        "query": "label_values(compose_service)",
+        "query": "label_values({compose_service=~\"$scope\"}, compose_service)",
         "refresh": 1,
         "type": "query"
       },
@@ -83,6 +260,15 @@
         "query": "label_values({compose_service=~\"$service\"}, level)",
         "refresh": 1,
         "type": "query"
+      },
+      {
+        "current": { "selected": true, "text": ".*", "value": ".*" },
+        "hide": 0,
+        "label": "Correlation ID (regex)",
+        "name": "correlation_id",
+        "options": [{ "selected": true, "text": ".*", "value": ".*" }],
+        "query": ".*",
+        "type": "textbox"
       }
     ]
   },
@@ -91,5 +277,5 @@
   "timezone": "browser",
   "title": "Logs del estacionamiento",
   "uid": "parking-logs",
-  "version": 1
+  "version": 2
 }
