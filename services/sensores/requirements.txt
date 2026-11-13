@@ -3,3 +3,4 @@ pydantic-settings==2.7.0
 fastapi==0.115.6
 uvicorn==0.34.0
 PyJWT[crypto]==2.10.1
+prometheus-client==0.21.1

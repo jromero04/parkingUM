@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import make_asgi_app
 
 from app.config import get_settings
 from app.errors import install_exception_handlers
@@ -17,3 +18,4 @@ app.middleware("http")(correlation_and_logging_middleware)
 install_exception_handlers(app)
 app.include_router(public_router)
 app.include_router(health_router)
+app.mount("/metrics", make_asgi_app())

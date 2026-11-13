@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: microservices
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - usuarios:8000
+          - parkings:8000
+          - reservas:8000
+          - metricas:8000
+          - sensores:8000
+
+  - job_name: parkings-sensor-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - parkings-sensor-worker:8000

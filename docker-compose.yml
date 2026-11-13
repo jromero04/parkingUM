@@ -145,7 +145,7 @@ services:
       JWT_AUDIENCE: ${JWT_AUDIENCE:-parking-api}
       JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-/run/parking-keys/public.pem}
       RESERVATIONS_SERVICE_TOKEN: ${RESERVATIONS_SERVICE_TOKEN:-dev-only-reservations-token}
-      SENSOR_FRESH_SECONDS: ${SENSOR_FRESH_SECONDS:-15}
+      SENSOR_FRESH_SECONDS: ${SENSOR_FRESH_SECONDS:-60}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
     volumes:
       - jwt-keys:/run/parking-keys:ro
@@ -170,7 +170,7 @@ services:
       SERVICE_NAME: parkings-sensors
       DATABASE_URL: ${PARKINGS_DATABASE_URL:-postgresql+psycopg://parkings_app:dev-only-password@parkings-db:5432/parkings_db}
       RABBITMQ_URL: ${RABBITMQ_URL:-amqp://parking_app:dev-only-rabbit-password@rabbitmq:5672/%2F}
-      SENSOR_FRESH_SECONDS: ${SENSOR_FRESH_SECONDS:-15}
+      SENSOR_FRESH_SECONDS: ${SENSOR_FRESH_SECONDS:-60}
     depends_on:
       parkings:
         condition: service_healthy
@@ -388,7 +388,7 @@ services:
       STATE_DB_PATH: /data/sensors.db
       SENSOR_ID: ${SIMULATOR_SENSOR_ID:-33333333-3333-4333-8333-333333333333}
       SPOT_ID: ${SIMULATOR_SPOT_ID:-22222222-2222-4222-8222-222222222222}
-      REPORT_INTERVAL_SECONDS: ${SENSOR_REPORT_INTERVAL_SECONDS:-5}
+      REPORT_INTERVAL_SECONDS: ${SENSOR_REPORT_INTERVAL_SECONDS:-30}
       SIMULATOR_ENABLED: ${SENSOR_SIMULATOR_ENABLED:-true}
       SIMULATE_FULL_PARKING: ${SIMULATE_FULL_PARKING:-true}
       START_PUBLISHER: "true"
@@ -452,6 +452,81 @@ services:
     networks: [backend, edge]
     logging: *default-logging
 
+  loki:
+    image: grafana/loki:3.7.9
+    command: ["-config.file=/etc/loki/config.yml"]
+    ports:
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./infra/observability/loki-config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    networks: [backend, edge]
+    logging: *default-logging
+
+  alloy:
+    image: grafana/alloy:v1.21.2
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    user: "0"
+    ports:
+      - "127.0.0.1:${ALLOY_PORT:-12345}:12345"
+    volumes:
+      - ./infra/observability/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    depends_on:
+      - loki
+    networks: [backend, edge]
+    logging: *default-logging
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      usuarios:
+        condition: service_healthy
+      parkings:
+        condition: service_healthy
+      reservas:
+        condition: service_healthy
+      metricas:
+        condition: service_healthy
+      sensores:
+        condition: service_healthy
+      parkings-sensor-worker:
+        condition: service_healthy
+    networks: [backend, edge]
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:13.2.1
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+      - prometheus
+    networks: [backend, edge]
+    logging: *default-logging
+
 networks:
   backend:
     internal: true
@@ -466,4 +541,8 @@ volumes:
   sensor-state:
   rabbitmq-data:
   jwt-keys:
+  loki-data:
+  alloy-data:
+  prometheus-data:
+  grafana-data:
 

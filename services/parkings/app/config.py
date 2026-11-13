@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     jwt_audience: str = "parking-api"
     jwt_public_key_path: str = "/run/parking-keys/public.pem"
     reservations_service_token: str = "dev-only-reservations-token"
-    sensor_fresh_seconds: int = Field(default=15, ge=5, le=300)
+    sensor_fresh_seconds: int = Field(default=60, ge=5, le=300)
     cors_origin: str = "http://localhost:3000"
 
 

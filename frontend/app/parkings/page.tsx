@@ -6,6 +6,7 @@ import { AppShell, EmptyState, ErrorNotice, Protected } from "@/components/app-s
 import { ParkingMap } from "@/components/parking-map";
 import { useAuth } from "@/features/auth/auth-context";
 import { ApiError } from "@/lib/api";
+import { createIdempotencyKey } from "@/lib/idempotency";
 import type { Parking, Spot } from "@/lib/types";
 
 export default function ParkingsPage() {
@@ -44,7 +45,7 @@ export default function ParkingsPage() {
     try {
       const result = await request<{ reservation: { status: string } }>("/api/v1/reservas", {
         method: "POST",
-        headers: { "Idempotency-Key": crypto.randomUUID() },
+        headers: { "Idempotency-Key": createIdempotencyKey() },
         body: JSON.stringify({ parking_id: spot.parking_id, spot_id: spot.id }),
       });
       setMessage(result.reservation.status === "confirmed" ? `La plaza ${spot.label} quedó reservada.` : "La reserva continúa procesándose.");
