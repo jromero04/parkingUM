@@ -230,11 +230,11 @@
           {
             "selected": false,
             "text": "Infraestructura",
-            "value": "(postgres|parkings-db|reservas-db|metricas-db|notificaciones-db|rabbitmq|loki|alloy|grafana)"
+            "value": "(postgres|parkings-db|reservas-db|metricas-db|notificaciones-db|rabbitmq)"
           },
           { "selected": false, "text": "Todo", "value": ".+" }
         ],
-        "query": "Aplicación : (frontend|gateway|usuarios|parkings|parkings-sensor-worker|parkings-outbox-worker|reservas|reservas-recovery-worker|reservas-outbox-worker|reservas-parking-worker|metricas|metricas-worker|notificaciones-worker|sensores),Infraestructura : (postgres|parkings-db|reservas-db|metricas-db|notificaciones-db|rabbitmq|loki|alloy|grafana),Todo : .+",
+        "query": "Aplicación : (frontend|gateway|usuarios|parkings|parkings-sensor-worker|parkings-outbox-worker|reservas|reservas-recovery-worker|reservas-outbox-worker|reservas-parking-worker|metricas|metricas-worker|notificaciones-worker|sensores),Infraestructura : (postgres|parkings-db|reservas-db|metricas-db|notificaciones-db|rabbitmq),Todo : .+",
         "type": "custom"
       },
       {
