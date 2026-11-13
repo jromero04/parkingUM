@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AppShell, EmptyState, ErrorNotice, Protected } from "@/components/app-shell";
 import { StatusBadge } from "@/components/status-badge";
@@ -37,14 +37,9 @@ export default function ReservationsPage() {
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(initialLoad);
+    const timer = window.setInterval(() => void load(), 5000);
+    return () => { window.clearTimeout(initialLoad); window.clearInterval(timer); };
   }, [load]);
-  const hasPending = useMemo(() => reservations.some((item) => item.status === "pending" || item.status === "cancel_pending"), [reservations]);
-  useEffect(() => {
-    if (!hasPending) return;
-    const timer = window.setInterval(load, 2000);
-    return () => window.clearInterval(timer);
-  }, [hasPending, load]);
 
   async function cancel(reservation: Reservation) {
     if (!token) return;
@@ -60,7 +55,7 @@ export default function ReservationsPage() {
   }
 
   const parkingNames = Object.fromEntries(parkings.map((parking) => [parking.id, parking.name]));
-  return <Protected roles={["user"]}><AppShell title="Mis reservas" subtitle="Las operaciones pendientes se actualizan cada dos segundos.">
+  return <Protected roles={["user"]}><AppShell title="Mis reservas" subtitle="Los estados se actualizan automáticamente según la actividad de la plaza.">
     {error && <ErrorNotice message={error} />}
     {loading ? <div className="center-state">Cargando reservas…</div> : reservations.length === 0 ? <EmptyState>Todavía no hiciste ninguna reserva.</EmptyState> : <section className="reservation-list">{reservations.map((reservation) => <article className="reservation-card" key={reservation.id}><div><div className="reservation-title"><h2>{parkingNames[reservation.parking_id] ?? "Estacionamiento"} · Plaza {spots[reservation.spot_id]?.label ?? "—"}</h2><StatusBadge status={reservation.status} /></div><p className="muted small">Creada el {new Date(reservation.created_at).toLocaleString("es-UY")}</p><p className="reservation-id">ID:{reservation.id}</p></div><div className="reservation-actions">{["pending", "confirmed"].includes(reservation.status) && <button className="danger-button" onClick={() => cancel(reservation)}>Cancelar</button>}</div></article>)}</section>}
   </AppShell></Protected>;

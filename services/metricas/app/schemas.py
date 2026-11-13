@@ -29,11 +29,13 @@ class ReservationSnapshot(CompatibleModel):
     user_id: UUID
     parking_id: UUID
     spot_id: UUID
-    status: Literal["pending", "confirmed", "cancel_pending", "cancelled", "rejected"]
+    status: Literal["pending", "confirmed", "occupied", "used", "cancel_pending", "cancelled", "rejected"]
     ever_confirmed: bool
     created_at: datetime
     updated_at: datetime
     confirmed_at: datetime | None
+    occupied_at: datetime | None = None
+    used_at: datetime | None = None
     cancelled_at: datetime | None
     failure_code: str | None
     version: int
@@ -88,6 +90,37 @@ class MetricsSummary(BaseModel):
     last_projected_at: datetime | None
     computed_at: datetime
     consistency: Literal["eventual"] = "eventual"
+
+
+class MetricSpotRead(BaseModel):
+    id: UUID
+    parking_id: UUID
+    sensor_id: UUID
+    label: str
+    physical_occupied: bool | None
+    assigned_reservation_id: UUID | None
+    sensor_status: Literal["fresh", "stale"]
+    last_report_at: datetime | None
+    sensor_expires_at: datetime | None
+    availability: Literal["available", "reserved", "occupied", "unknown"]
+    version: int
+    updated_at: datetime
+
+
+class SpotUsageItem(BaseModel):
+    spot_id: UUID
+    label: str
+    uses: int
+    percentage: float
+    last_used_at: datetime
+
+
+class SpotUsageReport(BaseModel):
+    period: Literal["7d", "30d", "all"]
+    from_at: datetime | None
+    to_at: datetime
+    total_uses: int
+    items: list[SpotUsageItem]
 
 
 class SensorAlert(BaseModel):

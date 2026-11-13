@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.errors import ApiError
 from app.fleet import sensor_definitions, sensor_states
-from app.schemas import FailureUpdate, SimulatedSensor
+from app.schemas import FailureUpdate, OccupancyUpdate, SimulatedSensor
 from app.security import require_sensor
 from app.state import SensorState
 
@@ -43,6 +43,13 @@ def list_sensors() -> list[SimulatedSensor]:
 def update_sensor(label: str, payload: FailureUpdate) -> SimulatedSensor:
     definition, state = find(label)
     state.set_failed(payload.failed)
+    return read_sensor(definition, state)
+
+
+@public_router.put("/{label}/occupancy", response_model=SimulatedSensor)
+def update_sensor_occupancy(label: str, payload: OccupancyUpdate) -> SimulatedSensor:
+    definition, state = find(label)
+    state.set_occupied(payload.occupied)
     return read_sensor(definition, state)
 
 

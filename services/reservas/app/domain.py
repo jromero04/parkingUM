@@ -160,6 +160,24 @@ def attempt_cancellation(
     value.lease_owner = None
     value.lease_until = None
     if result.outcome != "released":
+        if result.error_code == "RESERVATION_IN_USE":
+            value.status = "occupied"
+            value.occupied_at = now
+            value.version += 1
+            value.updated_at = now
+            value.lease_owner = None
+            value.lease_until = None
+            add_reservation_event(session, value, "reservation.occupied.v1", value.correlation_id)
+            details = {"reservation_id": value.id, "status": value.status}
+            for record in cancellation_records(session, value.id):
+                record.response_status = 409
+                record.response_payload = json.dumps({
+                    "status": 409, "code": "RESERVATION_IN_USE",
+                    "message": "La reserva no se puede cancelar porque la plaza esta ocupada.",
+                    "details": details,
+                })
+            session.commit()
+            return value
         value.next_attempt_at = now + timedelta(seconds=retry_delay(value.attempt_count))
         session.commit()
         log_event(logger, "recovery_attempted", "retry", level=logging.WARNING,

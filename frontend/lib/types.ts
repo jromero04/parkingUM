@@ -27,7 +27,7 @@ export type Spot = {
   updated_at: string;
 };
 
-export type ReservationStatus = "pending" | "confirmed" | "cancel_pending" | "cancelled" | "rejected";
+export type ReservationStatus = "pending" | "confirmed" | "occupied" | "used" | "cancel_pending" | "cancelled" | "rejected";
 
 export type Reservation = {
   id: string;
@@ -39,6 +39,8 @@ export type Reservation = {
   created_at: string;
   updated_at: string;
   confirmed_at: string | null;
+  occupied_at: string | null;
+  used_at: string | null;
   cancelled_at: string | null;
   failure_code: string | null;
   version: number;
@@ -52,6 +54,22 @@ export type MetricsSummary = {
   last_projected_at: string | null;
   computed_at: string;
   consistency: "eventual";
+};
+
+export type SpotUsageItem = {
+  spot_id: string;
+  label: string;
+  uses: number;
+  percentage: number;
+  last_used_at: string;
+};
+
+export type SpotUsageReport = {
+  period: "7d" | "30d" | "all";
+  from_at: string | null;
+  to_at: string;
+  total_uses: number;
+  items: SpotUsageItem[];
 };
 
 export type SensorAlert = {

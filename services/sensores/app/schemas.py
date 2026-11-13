@@ -13,6 +13,10 @@ class FailureUpdate(StrictModel):
     failed: bool
 
 
+class OccupancyUpdate(StrictModel):
+    occupied: bool
+
+
 class SimulatedSensor(BaseModel):
     label: str
     sensor_id: UUID

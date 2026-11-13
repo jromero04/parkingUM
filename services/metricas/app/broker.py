@@ -13,7 +13,9 @@ PARKING_EVENTS = (
     "parking.spot_initialized.v1", "parking.availability_changed.v1", "parking.sensor_stale.v1",
     "parking.sensor_recovered.v1", "parking.sensor_refreshed.v1",
 )
-RESERVATION_EVENTS = ("reservation.created.v1", "reservation.cancelled.v1")
+RESERVATION_EVENTS = (
+    "reservation.created.v1", "reservation.occupied.v1", "reservation.used.v1", "reservation.cancelled.v1",
+)
 RETRY_DELAYS = (5, 15, 60)
 
 

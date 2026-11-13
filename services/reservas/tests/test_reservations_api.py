@@ -142,3 +142,46 @@ def test_new_cancel_key_on_cancelled_is_noop(client, fake_parkings, auth_headers
     again = client.post(route, headers=idem(auth_headers))
     assert again.status_code == 200
     assert len(fake_parkings.release_calls) == 1
+
+
+def test_occupied_or_used_reservation_cannot_be_cancelled(
+    client, db_session, fake_parkings, auth_headers, create_payload
+):
+    created = client.post("/api/v1/reservas", json=create_payload,
+                          headers=idem(auth_headers)).json()["reservation"]
+    value = db_session.get(Reservation, created["id"])
+    value.status = "occupied"
+    db_session.commit()
+
+    occupied = client.post(
+        f"/api/v1/reservas/{created['id']}/cancelacion", headers=idem(auth_headers)
+    )
+    assert occupied.status_code == 409
+    assert occupied.json()["error"]["code"] == "RESERVATION_IN_USE"
+    assert len(fake_parkings.release_calls) == 0
+
+    value.status = "used"
+    db_session.commit()
+    used = client.post(
+        f"/api/v1/reservas/{created['id']}/cancelacion", headers=idem(auth_headers)
+    )
+    assert used.status_code == 409
+    assert used.json()["error"]["code"] == "RESERVATION_TERMINAL"
+    assert len(fake_parkings.release_calls) == 0
+
+
+def test_parking_rejects_cancellation_if_sensor_occupied_before_reservations_updates(
+    client, db_session, fake_parkings, auth_headers, create_payload
+):
+    created = client.post("/api/v1/reservas", json=create_payload,
+                          headers=idem(auth_headers)).json()["reservation"]
+    fake_parkings.release_results = [
+        ParkingResult("rejected", 409, "RESERVATION_IN_USE", "occupied")
+    ]
+
+    response = client.post(
+        f"/api/v1/reservas/{created['id']}/cancelacion", headers=idem(auth_headers)
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "RESERVATION_IN_USE"
+    assert db_session.get(Reservation, created["id"]).status == "occupied"

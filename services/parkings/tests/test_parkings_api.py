@@ -75,7 +75,7 @@ def test_release_is_idempotent_and_late_put_cannot_revive_assignment(client, db_
     assert repeated.status_code == 200
 
 
-def test_release_only_clears_its_own_assignment(client, db_session, service_headers):
+def test_release_is_rejected_while_the_reserved_spot_is_occupied(client, db_session, service_headers):
     reservation_id = str(uuid.uuid4())
     route = f"/internal/v1/asignaciones/{reservation_id}"
     created = client.put(route, json=assignment_payload(), headers=service_headers)
@@ -85,8 +85,9 @@ def test_release_only_clears_its_own_assignment(client, db_session, service_head
     spot.physical_occupied = True
     db_session.commit()
     released = client.delete(route, headers={**service_headers, "Idempotency-Key": str(uuid.uuid4())})
-    assert released.status_code == 200
+    assert released.status_code == 409
+    assert released.json()["error"]["code"] == "RESERVATION_IN_USE"
     db_session.refresh(spot)
-    assert spot.assigned_reservation_id is None
+    assert spot.assigned_reservation_id == reservation_id
     assert spot.physical_occupied is True
-    assert db_session.get(Assignment, reservation_id).status == "released"
+    assert db_session.get(Assignment, reservation_id).status == "assigned"

@@ -1,18 +1,21 @@
 import base64
 import binascii
-from datetime import datetime, timezone
-from typing import Annotated
+from datetime import datetime, timedelta, timezone
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.errors import ApiError
-from app.models import ReservationProjection, SpotProjection
-from app.schemas import AlertsCollection, MetricsSummary, Occupancy, ReservationCounts, SensorAlert, SpotCounts
+from app.models import ReservationProjection, SpotProjection, SpotUsageRecord
+from app.schemas import (
+    AlertsCollection, MetricSpotRead, MetricsSummary, Occupancy, ReservationCounts, SensorAlert,
+    SpotCounts, SpotUsageItem, SpotUsageReport,
+)
 from app.security import require_admin
 
 
@@ -76,7 +79,7 @@ def summary(
             physically_occupied_fresh=occupied_fresh,
         ),
         reservations=ReservationCounts(
-            confirmed_current=sum(value.status == "confirmed" for value in reservations),
+            confirmed_current=sum(value.status in {"confirmed", "occupied"} for value in reservations),
             created_total=sum(value.ever_confirmed for value in reservations),
             cancelled_total=sum(value.status == "cancelled" and value.ever_confirmed for value in reservations),
         ),
@@ -86,6 +89,77 @@ def summary(
         ),
         last_projected_at=max(projected) if projected else None,
         computed_at=now,
+    )
+
+
+@public_router.get("/plazas", response_model=list[MetricSpotRead])
+def metric_spots(
+    db: Annotated[Session, Depends(get_db)],
+    parking_id: UUID | None = None,
+) -> list[MetricSpotRead]:
+    now = datetime.now(timezone.utc)
+    spots, _ = projections(db, parking_id)
+    return [MetricSpotRead(
+        id=value.id,
+        parking_id=value.parking_id,
+        sensor_id=value.sensor_id,
+        label=value.label,
+        physical_occupied=value.physical_occupied,
+        assigned_reservation_id=value.assigned_reservation_id,
+        sensor_status="fresh" if is_fresh(value, now) else "stale",
+        last_report_at=aware(value.last_report_at),
+        sensor_expires_at=aware(value.sensor_expires_at),
+        availability=effective_availability(value, now),
+        version=value.version,
+        updated_at=aware(value.source_updated_at),
+    ) for value in sorted(spots, key=lambda item: item.label)]
+
+
+@public_router.get("/plazas/mas-utilizadas", response_model=SpotUsageReport)
+def most_used_spots(
+    db: Annotated[Session, Depends(get_db)],
+    periodo: Literal["7d", "30d", "all"] = "30d",
+    limit: Annotated[int, Query(ge=1, le=250)] = 10,
+    parking_id: UUID | None = None,
+) -> SpotUsageReport:
+    now = datetime.now(timezone.utc)
+    from_at = now - timedelta(days=7 if periodo == "7d" else 30) if periodo != "all" else None
+    filters = []
+    if from_at is not None:
+        filters.append(SpotUsageRecord.used_at >= from_at)
+    if parking_id is not None:
+        filters.append(SpotUsageRecord.parking_id == str(parking_id))
+
+    total_query = select(func.count()).select_from(SpotUsageRecord)
+    ranking_query = (
+        select(
+            SpotUsageRecord.spot_id,
+            SpotProjection.label,
+            func.count(SpotUsageRecord.reservation_id).label("uses"),
+            func.max(SpotUsageRecord.used_at).label("last_used_at"),
+        )
+        .join(SpotProjection, SpotProjection.id == SpotUsageRecord.spot_id)
+        .group_by(SpotUsageRecord.spot_id, SpotProjection.label)
+        .order_by(func.count(SpotUsageRecord.reservation_id).desc(), SpotProjection.label)
+        .limit(limit)
+    )
+    if filters:
+        total_query = total_query.where(*filters)
+        ranking_query = ranking_query.where(*filters)
+    total_uses = int(db.scalar(total_query) or 0)
+    rows = db.execute(ranking_query).all()
+    return SpotUsageReport(
+        period=periodo,
+        from_at=from_at,
+        to_at=now,
+        total_uses=total_uses,
+        items=[SpotUsageItem(
+            spot_id=row.spot_id,
+            label=row.label,
+            uses=row.uses,
+            percentage=round(100 * row.uses / total_uses, 2) if total_uses else 0,
+            last_used_at=aware(row.last_used_at),
+        ) for row in rows],
     )
 
 
